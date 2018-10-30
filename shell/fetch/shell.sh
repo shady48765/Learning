@@ -11,7 +11,7 @@ fi
 PROJECT_FLODER=`echo $1`
 PROJECT=`echo $2`
 PATH_DIR=/home/jiangq/work/jiangq/8.1
-LOG_DIR=${PATH_DIR}/fetch_log
+LOG_DIR=${PATH_DIR}/${PROJECT_FLODER}/fetch_log
 
 cd ${PATH_DIR}
 # if current dir equal PATH_DIR
@@ -48,9 +48,13 @@ else
     fi
 fi
 echo "---> ready to procceed. Download " ${PROJECT} " to "${PATH_DIR}/${PROJECT_FLODER}
+echo "file store in " ${PATH_DIR}"/"${PROJECT_FLODER}
+echo "log store in " ${LOG_DIR}
 sleep 5s
 #-------------------------------------------------------------------
 cd ${PATH_DIR}/${PROJECT_FLODER}
+echo "move in "$(pwd)
+echo "---------------------------------------------------------------"
 fetch ${PROJECT} | tee ${LOG_DIR}/fetch.log
 if [ $? -eq 0 ]
 then 
@@ -59,15 +63,13 @@ else
     echo "---> fetch failed." | tee -a ${LOG_DIR}/fetch.log
     exit
 fi
+cd alps
 
-cd ..
-echo "go to $(pwd)" | tee -a $LOG_PATH/mt8321_for_view_creat.log
+# tar -cvf ./mt8321_for_view/mt8321_for_view.tar.gz mt8321_for_view | tee ./mt8321_for_view/log/tar.log
 
-tar -cvf ./mt8321_for_view/mt8321_for_view.tar.gz mt8321_for_view | tee ./mt8321_for_view/log/tar.log
-
-du -h mt8321_for_view.tar.gz | tee -a $LOG_PATH/tar.log
-cd ./mt8321_for_view
-echo  "---> tar finished. " | tee -a $LOG_PATH/tar.log
-echo  "---> full operations finished. " | tee -a $LOG_PATH/mt8321_for_view_creat.log
+# du -h mt8321_for_view.tar.gz | tee -a $LOG_PATH/tar.log
+# cd ./mt8321_for_view
+# echo  "---> tar finished. " | tee -a $LOG_PATH/tar.log
+# echo  "---> full operations finished. " | tee -a $LOG_PATH/mt8321_for_view_creat.log
 echo "----------------- succeed ------------------"
 exit
