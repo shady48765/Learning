@@ -4,6 +4,7 @@
  *
  *
  *----------------------------------------------------------------------*/
+ 
 #include <linux/module.h>
 #include <linux/fs.h>
 #include <linux/init.h>
@@ -12,28 +13,28 @@
 #include <linux/uaccess.h>
 #include <linux/printk.h>
 #include <linux/device.h>
+#include <linux/kmalloc.h>
+#include <linux/major.h>
+#include <linux/cdev.h>
+#include <linux/export.h>
 
-#define user_msg(args)                                \
-		do{                                           \
-				printk(KERN_NOTICE "%s\n", args);     \
+/*--------------------- macro defined start --------------------------*/
+#define usr_msg(args)                                       \
+		do{                                                 \
+				printk(KERN_NOTICE "---> %s\n", args);      \
 		}while(0)
 
-#define err_msg(args)                                 \
-		do{                                           \
-				printk(KERN_ERR "%s\n", args);        \
+#define err_msg(args)                                           \
+		do{                                                     \
+				printk(KERN_ERR "-------> %s\n", args);         \
 		}while(0)
-
+/*--------------------- macro defined end --------------------------*/
 /*------------ global parameter declaration start -------------------*/
 static struct class *dev_class; 
 static struct device *dev_device;
 static const char *device_name = "simple_char_dev";
-static struct cdev chrdev = {
+static unsigned int dev_major = 0;
 
-};
-struct _dev_info {
-		struct cdev cdev;
-};
-struct _dev_info *dev_info;
 
 static const struct file_operations dev_fops = {
 		.owner = THIS_MODULE,
@@ -42,83 +43,94 @@ static const struct file_operations dev_fops = {
 		.open = dev_open,
 		.release = dev_release,
 };
-static unsigned int dev_major = 0;
+
+static struct _dev_info {
+		struct cdev dev;
+};
+static struct _dev_info *dev_info;
+
 
 /*------------ global parameter declaration end -------------------*/
 
 static int dev_open(struct inode *inode, struct file *filp)
 {
+    usr_msg("device open");
 		return 0;
 }
 
 static int dev_release(struct inode *inode, struct file *filp)
 {
+    usr_msg("device close");
+
 		return 0;
 }
 
 static ssize_t dev_read(struct file *filp, char __user * buf, size_t size,
 				loff_t * ppos)
 {
+    usr_msg("device read");
 		return 0;
 }
 
 static ssize_t dev_write(struct file *filp, const char __user * buf,
 				size_t size, loff_t * ppos)
 {
+    usr_msg("device write");
 
 }
 
 
 static int __init dev_init(void)
 {
-		int ret;
+    
+    int ret = 0;
+    dev_t dev_no = MKDEV(dev_major, 0);
 
+    if (dev_major) {
+        register_chrdev_region(dev_no, 1, device_name);
+    } else {
+        ret = alloc_chrdev_region(&dev_no, 0, 1);
+        if (ret < 0) {
+            err_msg("alloc_chrdev_region error");
+            goto out;
+        }
+        dev_major = MAJOR(dev_no);
+    }
 
-		user_msg("init module");
-		ret = register_chrdev(dev_major, device_name, &dev_fops);
-		if (ret < 0) {
-				printk(KERN_ERR "register device error <%s>\n", __func__);
-				goto err_register_dev;
-		}
-		dev_info = kmalloc(sizeof(struct _dev_info), GFP_KERNEL);
-		if(!dev_info) {
-				printk(KERN_ERR "kmalloc error <%s>", __func__);
-				goto err_kmalloc;
-		}
-
-		dev_class = class_create(dev_fops.owner, "test_module_class");
-		if(IS_ERR(dev_class)) {
-				printk(KERN_ERR "creat class error <%s>\n", __func__);
-				goto err_class_create;
-		}
-
-		dev_device = device_create(dev_class, NULL, MKDEV(dev_major, 0), NULL, "%s_%d", device_name, 1);
-		if(IS_ERR(dev_device))
-		{
-				printk(KERN_ERR "device_creat error <%s>\n", __func__);
-				goto err_device_creat;
-		}
-		user_msg("module init success");
-		return 0;
-
-err_device_creat:
-		class_destroy(dev_class);
-err_class_create:
-		unregister_chrdev(dev_major, device_name);
-err_kmalloc:	
-		kfree(dev_info);
-err_register_dev:
-		return ret;
+    dev_info = kmalloc(sizeof(struct _dev_info), GFP_KERNEL);
+    if (PTR_ERR(dev_info)) {
+        err_msg("kmalloc error");
+        ret = -ENOMEM;
+        goto err_kmalloc;
+        
+    }
+    
+    //-------- set device info, fill struct cdev ------
+    cdev_init(&dev_info->dev, &dev_fops);
+    //cdev_init has memset(cdev, 0, sizeof *cdev);
+    dev_info->dev.owner = THIS_MODULE;
+    ret = cdev_add(&dev_info->dev, dev_no, 1);
+    if(ret) {
+        err_msg("cdev add error");
+        goto err_cdev_add;
+    }
+return 0;
+//---------------- division line ----------------------
+err_cdev_add:
+    kfree(dev_info);
+err_kmalloc:
+    unregister_chrdev_region(dev_no, 1);
+out:
+    return ret;
 
 }
 
 static void __exit dev_exit(void)
 {
-		user_msg("module exit process");
-
-		device_destroy(dev_class, MKDEV(dev_major, 0));
-		class_destroy(dev_class);
-		unregister_chrdev(dev_major, 0);
+    usr_msg("ready to remove driver");
+    cdev_del(&dev_info->dev);
+    kfree(dev_info);
+    unregister_chrdev_region(MKDEV(dev_major, 0), 1);
 }
 module_init(dev_init);
 module_exit(dev_exit);
