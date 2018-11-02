@@ -5,7 +5,8 @@
 #include <linux/slab.h>
 #include <linux/uaccess.h>
 #include <linux/printk.h>
-
+#include <linux/device.h>
+#include <linux/printk.h>
 
 #define user_msg(args)                                \
         do{                                           \
