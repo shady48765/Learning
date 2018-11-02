@@ -28,9 +28,9 @@ clean:
 	rm -rf .*.?.sw?p 
 	rm -rf .*.?.swp 
 install:
+	@echo "---> install module $(temp)"
 	$(shell insmod $(temp))
-	@echo "---> install $(temp) completed"
 remove:
+	@echo "---> remove module $(MODULE_NAME)"
 	$(shell rmmod $(MODULE_NAME))
-	@echo "---> remove module $(MODULE_NAME) completed"
 	
