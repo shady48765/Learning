@@ -53,8 +53,8 @@ static ssize_t dev_write(struct file *filp, const char __user * buf,
 
 }
 /*------------ global parameter declaration start -------------------*/
-static const char *device_name = "simple_char_dev";
-static unsigned int dev_major = 252;
+static const char *device_name = "test_char_dev";
+static unsigned int dev_major = 0;
 
 
 static const struct file_operations dev_fops = {
@@ -77,7 +77,9 @@ static int __init dev_init(void)
 {
     
     int ret = 0;
-    dev_t dev_no = MKDEV(dev_major, 0);
+    
+	usr_msg("module init start");	
+	dev_t dev_no = MKDEV(dev_major, 0);
 
     if (dev_major) {
         register_chrdev_region(dev_no, 1, device_name);
@@ -91,7 +93,8 @@ static int __init dev_init(void)
     }
 
     dev_info = kmalloc(sizeof(struct _dev_info), GFP_KERNEL);
-    if (PTR_ERR(dev_info)) {
+    //dev_info = kmalloc(sizeof(struct _dev_info), GFP_ATOMIC);
+    if (!dev_info) {
         err_msg("kmalloc error");
         ret = -ENOMEM;
         goto err_kmalloc;
@@ -107,7 +110,9 @@ static int __init dev_init(void)
         err_msg("cdev add error");
         goto err_cdev_add;
     }
-return 0;
+	usr_msg("module init successed.");	
+//----------- char device creat finished --------------
+    return 0;
 //---------------- division line ----------------------
 err_cdev_add:
     kfree(dev_info);
