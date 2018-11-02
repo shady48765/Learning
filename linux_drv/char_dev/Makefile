@@ -26,6 +26,7 @@ clean:
 	make -C /lib/modules/$(KVERS)/build M=$(CURDIR) clean
 	@echo "---> clean swap file."
 	rm -rf .*.?.sw?p 
+	rm -rf .*.?.swp 
 install:
 	$(shell insmod $(temp))
 	@echo "---> install $(temp) completed"

@@ -1,3 +1,9 @@
+/*----------------------------------------------------------------------*
+ * Data :
+ * using struct cdev to register char device
+ *
+ *
+ *----------------------------------------------------------------------*/
 #include <linux/module.h>
 #include <linux/fs.h>
 #include <linux/init.h>
