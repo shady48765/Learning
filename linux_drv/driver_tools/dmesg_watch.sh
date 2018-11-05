@@ -15,7 +15,7 @@
 
 while true
 do
-		dmesg -T --level=err | tail -5
+		dmesg -T --level=err | tail -10
 		echo "----------------------------------------------------"
-		sleep 3s
+		sleep 2s
 done

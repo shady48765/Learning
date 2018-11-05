@@ -49,11 +49,22 @@ static int dev_release(struct inode *inode, struct file *filp)
 	// device restore code
 	return 0;
 }
-
-static ssize_t dev_read(struct file * flip, char __user * buff, size_t counter, loff_t * fops)
+/**
+ * protatype : static inline int copy_to_user(void __user volatile *to, const void *from,
+			       unsigned long n)
+ * @param  flip    [description]
+ * @param  buff    [description]
+ * @param  counter [description]
+ * @param  fops    [description]
+ * @return         [description]
+ */
+static ssize_t dev_read(struct file * flip, char __user * buff, size_t counter,
+                        loff_t * fops)
 {
 	usr_msg("device read");
 
+	//copy_to_user();
+	usr_msg("device read finished.");
 	return 0;
 }
 /*-----------------------------------------------------------------------------------
@@ -62,17 +73,54 @@ static ssize_t dev_read(struct file * flip, char __user * buff, size_t counter, 
 * @Param Description :
 *    (struct file * flip) :
 *    (const char __user * buff) :
-*    (size_t count) :
+*    (size_t count) : set counter max is four
 *    (loff_t * fops) :
 * @Return value :
 ------------------------------------------------------------------------------------*/
-//
-// count
-static ssize_t dev_write(struct file * flip, const char __user * buff, size_t counter, loff_t * fops)
+static ssize_t dev_write(struct file * flip, const char __user * buff,
+                         size_t counter, loff_t * fops)
 {
+	int value;
+	int ret;
+	
 	usr_msg("device write");
-
-	return 0;
+	if (counter < 0 || counter > 4)
+		return -EINVAL;
+	/**
+	 * prototype : copy_from_user(void *to, const void __user *from, unsigned long size)
+	 * parameter to : copy user data to. void * format
+	 * parameter from : copy user data from. normally is a buff
+	 * parameter size : numbers of data need to be copied
+	 * return value : 0 for success, > 0 for error
+	 *
+	 */
+	ret = copy_from_user(&value, buff, counter);
+	if (ret > 0)
+	{
+		err_msg("copy_from_user error");
+		return -EFAULT;
+	}
+	usr_msg("start to switch copied data.");
+	switch (value)
+	{
+	case 0:
+		usr_msg("value is : 0");
+		break;
+	case 1:
+		usr_msg("value is : 1");
+		break;
+	case 2:
+		usr_msg("value is : 2");
+		break;
+	case 3:
+		usr_msg("value is : 3");
+		break;
+	default:
+		usr_msg("Out of handle range");
+	}
+	usr_msg("device write finished.");
+	// return data has been copied
+	return counter;
 
 }
 // static long dev_ioctl (struct file *flip, unsigned int, unsigned long)
@@ -158,6 +206,7 @@ static int __init dev_init(void)
 	// add char_device_driver to class
 	#define class_create(owner, name)
 	-------------------------------------------------------------------------------------------*/
+	usr_msg("ready to create device class.");
 	dev_info->dev_class = class_create(THIS_MODULE, device_cls_name);
 	if (IS_ERR(dev_info->dev_class))
 	{
@@ -173,18 +222,19 @@ static int __init dev_init(void)
 	#endif
 	--->create /dev/char_device_driver point
 	-------------------------------------------------------------------------------------------*/
-	dev_info->dev_device = device_create(dev_info->dev_class, NULL, dev_no, NULL, "%s", "test_chrdev_dev");
+	usr_msg("ready to create device in path /dev/.");
+	dev_info->dev_device = device_create(dev_info->dev_class, NULL, dev_no, NULL, "%s", device_name);
 	if (IS_ERR(dev_info->dev_device))
 	{
 		err_msg("device create error");
 		ret = PTR_ERR(dev_info->dev_device);
 		goto err_device_create;
 	}
-	usr_msg("module create successed.");
+	usr_msg("module has been created.");
 	//----------- char device devices create end ----------------
 
 	return 0;
-    
+
 //---------------- division line ----------------------
 err_device_create:
 	class_destroy(dev_info->dev_class);
@@ -207,6 +257,7 @@ static void __exit dev_exit(void)
 	cdev_del(&dev_info->dev);
 	unregister_chrdev_region(dev_info->evt, 1);
 	kfree(dev_info);
+	usr_msg("driver has been removed");
 }
 module_init(dev_init);
 module_exit(dev_exit);

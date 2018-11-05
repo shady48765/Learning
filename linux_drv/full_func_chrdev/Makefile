@@ -38,8 +38,8 @@ clean_tansh:
 	rm -rf .tmp_versions
 install:
 	@echo "---> install module $(temp)"
-	$(shell insmod $(temp))
+	$(shell sudo insmod $(temp))
 remove:
 	@echo "---> remove module $(MODULE_NAME)"
-	$(shell rmmod $(MODULE_NAME))
+	$(shell sudo rmmod $(MODULE_NAME))
 	
