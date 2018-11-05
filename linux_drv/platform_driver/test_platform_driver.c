@@ -123,23 +123,52 @@ static ssize_t dev_write(struct file * flip, const char __user * buff,
 	return counter;
 
 }
-// static long dev_ioctl (struct file *flip, unsigned int, unsigned long)
-// {
-//     usr_msg("device dev_ioctl");
-// 	return 0;
-// }
+static long dev_ioctl (struct file *flip, unsigned int, unsigned long)
+{
+    usr_msg("device dev_ioctl");
+	return 0;
+}
 
 /*------------ device parameter declaration start -------------------*/
 static const char *device_name     = "test_char_dev";
 static const char *device_cls_name = "test_chrdev_cls";
+static const char *platform_name   = "test_platform";
 static unsigned int node_major     = 0;
+static int matched_id = 55;
 
+// --- platform ---
+/*------------------------------------------------------------------
+struct platform_driver {
+	int (*probe)(struct platform_device *);
+	int (*remove)(struct platform_device *);
+	void (*shutdown)(struct platform_device *);
+	int (*suspend)(struct platform_device *, pm_message_t state);
+	int (*resume)(struct platform_device *);
+	struct device_driver driver;
+	const struct platform_device_id *id_table;
+	bool prevent_deferred_probe;
+};
+-------------------------------------------------------------------*/
+static struct platform_device pd_device = {
+    .name = platform_name,
+    .id = matched_id,
+
+};
+static struct platform_driver pd_driver = {
+    .owner = THIS_MODULE,
+    .name = platform_name,
+    .of_match_table = &
+    .probe = pd_probe,
+    .remove = pd_remove,
+    .
+};
+// --- device ---
 static const struct file_operations dev_fops = {
 	.read           = dev_read,
 	.write          = dev_write,
 	.open           = dev_open,
 	.release        = dev_release,
-	// .unlocked_ioctl = dev_ioctl,
+	.unlocked_ioctl = dev_ioctl,
 };
 
 struct _dev_info {
@@ -150,7 +179,6 @@ struct _dev_info {
 	struct device * dev_device;
 };
 static struct _dev_info *dev_info;
-
 
 /*------------ device parameter declaration end -------------------*/
 
@@ -266,86 +294,5 @@ module_param(node_major, int, S_IRUGO);
 
 MODULE_AUTHOR("QUAN");
 MODULE_LICENSE("GPL");
-MODULE_DESCRIPTION("test char device driver");
+MODULE_DESCRIPTION("platform char device test");
 
-
-
-/*----------------------- ctrl_cdev_ioctl -------------------------------*/
-// static long ctrl_cdev_ioctl(struct file *file, unsigned int cmd,
-// 			    unsigned long arg)
-// {
-// int err = 0;
-// void __user *argp = (void __user *)arg;
-
-// if (!capable(CAP_SYS_RESOURCE))
-// 	return -EPERM;
-
-// switch (cmd) {
-// /* Attach an MTD device command */
-// case UBI_IOCATT:
-// {
-// 	struct ubi_attach_req req;
-// 	struct mtd_info *mtd;
-
-// 	dbg_gen("attach MTD device");
-// 	err = copy_from_user(&req, argp, sizeof(struct ubi_attach_req));
-// 	if (err) {
-// 		err = -EFAULT;
-// 		break;
-// 	}
-
-// 	if (req.mtd_num < 0 ||
-// 	    (req.ubi_num < 0 && req.ubi_num != UBI_DEV_NUM_AUTO)) {
-// 		err = -EINVAL;
-// 		break;
-// 	}
-
-// 	mtd = get_mtd_device(NULL, req.mtd_num);
-// 	if (IS_ERR(mtd)) {
-// 		err = PTR_ERR(mtd);
-// 		break;
-// 	}
-
-// 	/*
-// 	 * Note, further request verification is done by
-// 	 * 'ubi_attach_mtd_dev()'.
-// 	 */
-// 	mutex_lock(&ubi_devices_mutex);
-// 	err = ubi_attach_mtd_dev(mtd, req.ubi_num, req.vid_hdr_offset,
-// 				 req.max_beb_per1024);
-// 	mutex_unlock(&ubi_devices_mutex);
-// 	if (err < 0)
-// 		put_mtd_device(mtd);
-// 	else
-// 		/* @err contains UBI device number */
-// 		err = put_user(err, (__user int32_t *)argp);
-
-// 	break;
-// }
-
-// /* Detach an MTD device command */
-// case UBI_IOCDET:
-// {
-// 	int ubi_num;
-
-// 	dbg_gen("detach MTD device");
-// 	err = get_user(ubi_num, (__user int32_t *)argp);
-// 	if (err) {
-// 		err = -EFAULT;
-// 		break;
-// 	}
-
-// 	mutex_lock(&ubi_devices_mutex);
-// 	err = ubi_detach_mtd_dev(ubi_num, 0);
-// 	mutex_unlock(&ubi_devices_mutex);
-// 	break;
-// }
-
-// default:
-// 	err = -ENOTTY;
-// 	break;
-// }
-
-// return err;
-//
-// }
