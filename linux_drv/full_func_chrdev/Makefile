@@ -27,6 +27,15 @@ clean:
 	rm -rf .*.?.sw?p 
 	rm -rf .*.?.swp 
 	@echo "---> clean trash finished."
+clean_tansh:
+	@echo "---> clean swap file."
+	rm -rf .*.?.sw?p 
+	rm -rf .*.?.swp
+	@echo "---> clean trash file."
+	rm -rf *.o
+	rm -rf *.*.o
+	rm -rf .*.cmd
+	rm -rf .tmp_versions
 install:
 	@echo "---> install module $(temp)"
 	$(shell insmod $(temp))

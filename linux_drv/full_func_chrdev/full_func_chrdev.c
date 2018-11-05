@@ -14,6 +14,8 @@
 #include <linux/uaccess.h>
 #include <linux/printk.h>
 #include <linux/major.h>
+#include <linux/device.h>
+
 
 /*--------------------- macro defined start --------------------------*/
 #define usr_msg(args)                                           \
@@ -153,7 +155,7 @@ static ssize_t dev_write(struct file * flip, const char __user * buff, size_t co
 
 
 
-
+#if 0
     
 	if(count<0 || count != 4 )
 		return -EINVAL;
@@ -182,14 +184,18 @@ static ssize_t dev_write(struct file * flip, const char __user * buff, size_t co
 
 	//返回已经拷贝成功的数据个数
 	return count;
+#endif
     return 0;
 
 }
-static long dev_ioctl (struct file *, unsigned int, unsigned long);
+static long dev_ioctl (struct file *, unsigned int, unsigned long)
+{
+
+}
 /*------------ device parameter declaration start -------------------*/
 static const char *device_name = "test_char_dev";
+static const char *device_cls_name = "test_chrdev_cls"
 static unsigned int dev_major = 0;
-
 
 static const struct file_operations dev_fops = {
     .read    = dev_read,
@@ -213,6 +219,7 @@ static int __init dev_init(void)
 
     int ret = 0;
 
+    //----------- char device creat start --------------
     usr_msg("module init start");
     dev_t dev_no = MKDEV(dev_major, 0);
 
@@ -246,9 +253,41 @@ static int __init dev_init(void)
         goto err_cdev_add;
     }
     usr_msg("module init successed.");
-//----------- char device creat finished --------------
+	//----------- char device creat finished ------------------
+	//----------- char device class create start --------------
+	/*------------------------------------------------------------------------------------------
+	// add char_device_driver to class
+	#define class_create(owner, name)
+	-------------------------------------------------------------------------------------------*/
+	struct class * ret_cls = class_create(THIS_MODULE, device_cls_name);
+    if(IS_ERR(ret_cls))
+    {
+        err_msg("class create error");
+        goto err_class_create;
+    }
+	//----------- char device class create end ----------------
+	//----------- char device devices create start --------------
+    /*------------------------------------------------------------------------------------------
+    struct device *device_create(struct class *class, struct device *parent,
+			     dev_t devt, void *drvdata, const char *fmt, ...)
+    #endif
+    --->create /dev/char_device_driver point
+    -------------------------------------------------------------------------------------------*/
+	struct device * ret_dev = device_create(ret_cls, NULL, dev_no, NULL, "%s", "test_chrdev_dev");
+    if(IS_ERR(ret_dev))
+    {
+        err_msg("device create error");
+        goto err_device_create;
+    }
+    usr_msg("module create successed.");
+	//----------- char device devices create end ----------------
+	
     return 0;
 //---------------- division line ----------------------
+err_device_create:
+    class_destroy(ret_cls);
+err_class_create:
+    cdev_del(&dev_info->dev);
 err_cdev_add:
     kfree(dev_info);
 err_kmalloc:
