@@ -3,27 +3,21 @@
 # Data :
 # Version
 # ------------------------------------------------------- #
-# get system verison
-KVERS = $(shell uname -r)
-# get driver floder path
-CURDIR := $(shell pwd)
+KER_DIR = /home/quan/samba_share/np/linux
+CUR_DIR = $(shell pwd)
 
 # Kernel modules
 obj-m += usr_irq_driver.o
 # module install name
 MODULE_NAME = usr_irq_driver
 
-# Specify flags for the module compilation.
-#EXTRA_CFLAGS=-g -O0
-
-temp += ${MODULE_NAME}.ko 
 all : kernel_modules
 
 kernel_modules:
-	make -C /lib/modules/$(KVERS)/build M=$(CURDIR) modules
+	make -C $(KER_DIR) M=$(CUR_DIR) modules ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu-
 	@echo "---> build finished."
 clean:
-	make -C /lib/modules/$(KVERS)/build M=$(CURDIR) clean
+	make -C $(KER_DIR) M=$(CUR_DIR) clean
 	rm -rf .*.?.sw?p 
 	rm -rf .*.?.swp 
 	@echo "---> clean trash finished."
@@ -42,4 +36,6 @@ install:
 remove:
 	@echo "---> remove module $(MODULE_NAME)"
 	$(shell sudo rmmod $(MODULE_NAME))
-	
+
+
+temp += ${MODULE_NAME}.ko 
