@@ -134,6 +134,7 @@ static long dev_ioctl (struct file *flip, unsigned int cmd, unsigned long param)
 #include <linux/interrupt.h>
 //#include <irqs.h> ---> only for samsung chip fit
 #include <linux/of_irq.h>
+#include <linux/gpio.h>
 
 
 // irq trigger mode : IRQF_TRIGGER_RISING、IRQF_TRIGGER_FALLING、IRQF_TRIGGER_HIGH、IRQF_TRIGGER_LOW
@@ -145,7 +146,9 @@ static struct _dev_irq_info {
     
 };
 
-IRQ_EINT();
+gpio_to_irq()
+
+//IRQ_EINT();
 request_irq();
 free_irq();
 tasklet_schedule();
