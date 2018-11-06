@@ -9,9 +9,9 @@ KVERS = $(shell uname -r)
 CURDIR := $(shell pwd)
 
 # Kernel modules
-obj-m += easy_chrdev.o
+obj-m += irq_driver.o
 # module install name
-MODULE_NAME = easy_chrdev
+MODULE_NAME = irq_driver
 
 # Specify flags for the module compilation.
 #EXTRA_CFLAGS=-g -O0
@@ -24,13 +24,22 @@ kernel_modules:
 	@echo "---> build finished."
 clean:
 	make -C /lib/modules/$(KVERS)/build M=$(CURDIR) clean
-	@echo "---> clean swap file."
 	rm -rf .*.?.sw?p 
 	rm -rf .*.?.swp 
+	@echo "---> clean trash finished."
+clean_tansh:
+	@echo "---> clean swap file."
+	rm -rf .*.?.sw?p 
+	rm -rf .*.?.swp
+	@echo "---> clean trash file."
+	rm -rf *.o
+	rm -rf *.*.o
+	rm -rf .*.cmd
+	rm -rf .tmp_versions
 install:
 	@echo "---> install module $(temp)"
-	$(shell insmod $(temp))
+	$(shell sudo insmod $(temp))
 remove:
 	@echo "---> remove module $(MODULE_NAME)"
-	$(shell rmmod $(MODULE_NAME))
+	$(shell sudo rmmod $(MODULE_NAME))
 	

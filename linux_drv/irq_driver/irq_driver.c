@@ -27,13 +27,13 @@
             do{                                                 \
                     printk(KERN_ERR "-------> %s\n", args);     \
             }while(0)
-/*--------------------- macro defined end --------------------------*/
-/*------------ global parameter declaration start -------------------*/
+/*--------------------------- macro defined end ---------------------------*/
+/*----------------- global parameter declaration start --------------------*/
 #define CHR_IOC_MAGIC        'G'
 
-/*------------ global parameter declaration end -------------------*/
+/*----------------- global parameter declaration end ----------------------*/
 
-/*----------------------- ctrl_cdev_ioctl -------------------------------*/
+/*----------------------- device fops start -------------------------------*/
 
 static int dev_open(struct inode *inode, struct file *filp)
 {
@@ -128,8 +128,40 @@ static long dev_ioctl (struct file *flip, unsigned int cmd, unsigned long param)
     usr_msg("device dev_ioctl");
 	return 0;
 }
+/*----------------------- device fops end -------------------------------*/
+/*----------------------- device irq start --------------------------------*/
+#include <linux/workqueue.h>
+#include <linux/interrupt.h>
+#include <irqs.h>
+#include <linux/of_irq.h>
 
-/*------------ device parameter declaration start -------------------*/
+
+// irq trigger mode : IRQF_TRIGGER_RISING、IRQF_TRIGGER_FALLING、IRQF_TRIGGER_HIGH、IRQF_TRIGGER_LOW
+struct work_struct irq_workqueue;
+
+static struct _dev_irq_info {
+    unsigned int irq_number;
+    
+    
+};
+
+IRQ_EINT();
+request_irq();
+free_irq();
+tasklet_schedule();
+INIT_WORK();
+create_workqueues();
+workqueue_init();
+schedule_work();
+
+irq_of_parse_and_map();
+
+
+
+
+
+/*----------------------- device irq end ----------------------------------*/
+/*---------------- device parameter declaration start -------------------*/
 static const char *device_name     = "test_char_dev";
 static const char *device_cls_name = "test_chrdev_cls";
 static unsigned int node_major     = 0;
@@ -148,11 +180,13 @@ struct _dev_info {
 	unsigned int dev_major;
 	struct class * dev_class;
 	struct device * dev_device;
+    // irq part
+    struct _dev_irq_info dev_irq;
 };
 static struct _dev_info *dev_info;
 
 
-/*------------ device parameter declaration end -------------------*/
+/*--------------------- device parameter declaration end -------------------*/
 
 
 static int __init dev_init(void)
@@ -233,9 +267,25 @@ static int __init dev_init(void)
 	usr_msg("module has been created.");
 	//----------- char device devices create end ----------------
 
+    //------------------------ irq part start -------------------------
+    // request_irq(unsigned int irq, irq_handler_t handler, unsigned long flags,
+	//              const char *name, void *dev)
+    ret = request_irq();
+    if(ret == -EINVAL) {
+        err_msg("irq request failed.")
+        goto err_irq;
+    }
+    else if(ret == -EBUSY) {
+        err_msg("irq number is using.")
+        goto err_irq;
+    }
+    
+    //------------------------ irq part end -------------------------
 	return 0;
 
 //---------------- division line ----------------------
+err_irq:
+    device_destroy(dev_info->dev_class, dev_info->evt);
 err_device_create:
 	class_destroy(dev_info->dev_class);
 err_class_create:
