@@ -7,21 +7,21 @@ KER_DIR = /home/parallels/np_k1/linux
 CUR_DIR = $(shell pwd)
 
 # Kernel modules
-obj-m += usr_irq_driver.o
+obj-m += usr_basic_drv.o
 # module install name
-MODULE_NAME = usr_irq_driver
+MODULE_NAME = usr_basic_drv
 
 all : kernel_modules
 
 kernel_modules:
 	make -C $(KER_DIR) M=$(CUR_DIR) modules ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu-
 	@echo "---> build finished."
-clean_all:
+clean:
 	make -C $(KER_DIR) M=$(CUR_DIR) clean
 	rm -rf .*.?.sw?p 
 	rm -rf .*.?.swp 
 	@echo "---> clean trash finished."
-clean:
+delete:
 	@echo "---> clean swap file."
 	rm -rf .*.?.sw?p 
 	rm -rf .*.?.swp
@@ -30,6 +30,8 @@ clean:
 	rm -rf *.*.o
 	rm -rf .*.cmd
 	rm -rf .tmp_versions
+	rm -rf *odul*.*
+	rm -rf *.mod.c
 install:
 	@echo "---> install module $(temp)"
 	$(shell sudo insmod $(temp))

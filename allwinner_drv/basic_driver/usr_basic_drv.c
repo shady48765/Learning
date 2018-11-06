@@ -130,8 +130,8 @@ static long dev_ioctl (struct file *flip, unsigned int cmd, unsigned long param)
 }
 /*----------------------- device fops end -------------------------------*/
 /*---------------- device parameter declaration start -------------------*/
-static const char *device_name     = "irq_chr_device";
-static const char *device_cls_name = "irq_chr_dev_cls";
+static const char *device_name     = "basic_chr_drv";
+static const char *device_cls_name = "basic_chr_drv_cls";
 static unsigned int node_major     = 0;
 
 static const struct file_operations dev_fops = {
