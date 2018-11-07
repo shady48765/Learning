@@ -9,14 +9,18 @@ KVERS = $(shell uname -r)
 CURDIR := $(shell pwd)
 
 # Kernel modules
-obj-m += test_platform_driver.o
+obj-m += usr_platform_drv.o
+obj-m += usr_platform_dev.o
 # module install name
-MODULE_NAME = test_platform_driver
+MODULE_DRV = usr_platform_drv
+MODULE_DEV = usr_platform_dev
 
 # Specify flags for the module compilation.
 #EXTRA_CFLAGS=-g -O0
 
-temp += ${MODULE_NAME}.ko 
+temp_drv += ${MODULE_DRV}.ko 
+temp_dev += ${MODULE_DEV}.ko 
+
 all : kernel_modules
 
 kernel_modules:
@@ -27,7 +31,7 @@ clean:
 	rm -rf .*.?.sw?p 
 	rm -rf .*.?.swp 
 	@echo "---> clean trash finished."
-clean_tansh:
+clean_trash:
 	@echo "---> clean swap file."
 	rm -rf .*.?.sw?p 
 	rm -rf .*.?.swp
@@ -36,10 +40,16 @@ clean_tansh:
 	rm -rf *.*.o
 	rm -rf .*.cmd
 	rm -rf .tmp_versions
+	rm -rf *odul*.*
+	rm -rf .cache.mk
 install:
-	@echo "---> install module $(temp)"
-	$(shell sudo insmod $(temp))
+	@echo "---> install module $(temp_drv)"
+	$(shell sudo insmod $(temp_drv))
+	@echo "---> install module $(temp_dev)"
+	$(shell sudo insmod $(temp_dev))
 remove:
-	@echo "---> remove module $(MODULE_NAME)"
-	$(shell sudo rmmod $(MODULE_NAME))
+	@echo "---> remove module $(temp_drv)"
+	$(shell sudo rmmod $(temp_drv))
+	@echo "---> remove module $(temp_dev)"
+	$(shell sudo rmmod $(temp_dev))
 	

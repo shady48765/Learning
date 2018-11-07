@@ -1,8 +1,7 @@
 /*----------------------------------------------------------------------*
- * Data : 2018-10-02
- * using struct cdev to register char device
- * creat class for device
- * fill read, write, ioctl, close
+ * Data : 2018-10-07
+ * Function: register a char device as a platform device
+ * 
  *
  *
  *----------------------------------------------------------------------*/
@@ -15,6 +14,7 @@
 #include <linux/printk.h>
 #include <linux/major.h>
 #include <linux/device.h>
+#include <linux/platform_device.h>
 
 
 /*--------------------- macro defined start --------------------------*/
@@ -28,12 +28,115 @@
                     printk(KERN_ERR "-------> %s\n", args);     \
             }while(0)
 /*--------------------- macro defined end --------------------------*/
-/*------------ global parameter declaration start -------------------*/
+/*------------ global parameter declaration start -------------------------*/
+/*------------ function declaration start --------------------*/
+static int dev_open(struct inode *inode, struct file *filp);
+static int dev_release(struct inode *inode, struct file *filp);
+static ssize_t dev_read(struct file * flip, char __user * buff, 
+                        size_t counter, loff_t * fops);
+static ssize_t dev_write(struct file * flip, const char __user * buff,
+                         size_t counter, loff_t * fops);
+static long dev_ioctl (struct file *flip, unsigned int cmd, unsigned long data);
+static int pd_probe(struct platform_device *pdev);
+static int pd_remove(struct platform_device * pdev);
+
+/*------------ function declaration end ----------------------*/
+/*------------ global struct and param declaration start -----------*/
 #define CHR_IOC_MAGIC        'G'
 
-/*------------ global parameter declaration end -------------------*/
+#define DEV_NAME         "test_char_dev"
+#define DEV_CLS_NAME     "test_chrdev_cls"
+#define PLT_NAME         "test_chrdev_platform"
+ 
+static unsigned int node_major     = 0;
+// --- platform ---
+/**
+struct platform_driver {
+	int (*probe)(struct platform_device *);
+	int (*remove)(struct platform_device *);
+	void (*shutdown)(struct platform_device *);
+	int (*suspend)(struct platform_device *, pm_message_t state);
+	int (*resume)(struct platform_device *);
+	struct device_driver driver;
+	const struct platform_device_id *id_table;
+	bool prevent_deferred_probe;
+};
+struct platform_device {
+	const char	*name;
+	int		id;
+	bool		id_auto;
+	struct device	dev;
+	u32		num_resources;
+	struct resource	*resource;
 
-/*----------------------- ctrl_cdev_ioctl -------------------------------*/
+	const struct platform_device_id	*id_entry;
+};
+**/
+// struct device_driver {
+// 	const char		*name;
+// 	struct bus_type		*bus;
+
+// 	struct module		*owner;
+// 	const char		*mod_name;	/* used for built-in modules */
+
+// 	bool suppress_bind_attrs;	/* disables bind/unbind via sysfs */
+// 	enum probe_type probe_type;
+
+// 	const struct of_device_id	*of_match_table;
+// 	const struct acpi_device_id	*acpi_match_table;
+
+// 	int (*probe) (struct device *dev);
+// 	int (*remove) (struct device *dev);
+// 	void (*shutdown) (struct device *dev);
+// 	int (*suspend) (struct device *dev, pm_message_t state);
+// 	int (*resume) (struct device *dev);
+// 	const struct attribute_group **groups;
+
+// 	const struct dev_pm_ops *pm;
+
+// 	struct driver_private *p;
+// };
+static const struct platform_device_id pd_driver_id [] = {
+{.name = "test_plt_drv",            .driver_data = 0xff01},
+{.name = "test_platform_drv",       .driver_data = 0xff02},
+{.name = "no_devtree_platform",    .driver_data = 0xff03},
+};
+
+struct platform_driver pd_driver = {
+    .driver = {
+        .owner = THIS_MODULE,
+        .name  = PLT_NAME,
+     },
+    .probe = pd_probe,
+    .remove = pd_remove,
+    .id_table = pd_driver_id,
+    
+};
+
+// --- device ---
+static const struct file_operations dev_fops = {
+	.read           = dev_read,
+	.write          = dev_write,
+	.open           = dev_open,
+	.release        = dev_release,
+	.unlocked_ioctl = dev_ioctl,
+};
+
+struct _dev_info {
+	struct cdev dev;
+	dev_t evt;
+	unsigned int dev_major;
+	struct class * dev_class;
+	struct device * dev_device;
+};
+static struct _dev_info *dev_info;
+
+
+/*------------ global struct and param declaration end -------*/
+
+/*------------ global parameter declaration end --------------------------*/
+
+/*------------ file operations start -------------------------------*/
 
 static int dev_open(struct inode *inode, struct file *filp)
 {
@@ -58,8 +161,8 @@ static int dev_release(struct inode *inode, struct file *filp)
  * @param  fops    [description]
  * @return         [description]
  */
-static ssize_t dev_read(struct file * flip, char __user * buff, size_t counter,
-                        loff_t * fops)
+static ssize_t dev_read(struct file * flip, char __user * buff, 
+                            size_t counter, loff_t * fops)
 {
 	usr_msg("device read");
 
@@ -123,69 +226,14 @@ static ssize_t dev_write(struct file * flip, const char __user * buff,
 	return counter;
 
 }
-static long dev_ioctl (struct file *flip, unsigned int, unsigned long)
+static long dev_ioctl (struct file *flip, unsigned int cmd, unsigned long data)
 {
     usr_msg("device dev_ioctl");
 	return 0;
 }
 
-/*------------ device parameter declaration start -------------------*/
-static const char *device_name     = "test_char_dev";
-static const char *device_cls_name = "test_chrdev_cls";
-static const char *platform_name   = "test_platform";
-static unsigned int node_major     = 0;
-static int matched_id = 55;
-
-// --- platform ---
-/*------------------------------------------------------------------
-struct platform_driver {
-	int (*probe)(struct platform_device *);
-	int (*remove)(struct platform_device *);
-	void (*shutdown)(struct platform_device *);
-	int (*suspend)(struct platform_device *, pm_message_t state);
-	int (*resume)(struct platform_device *);
-	struct device_driver driver;
-	const struct platform_device_id *id_table;
-	bool prevent_deferred_probe;
-};
--------------------------------------------------------------------*/
-static struct platform_device pd_device = {
-    .name = platform_name,
-    .id = matched_id,
-
-};
-static struct platform_driver pd_driver = {
-    .owner = THIS_MODULE,
-    .name = platform_name,
-    .of_match_table = &
-    .probe = pd_probe,
-    .remove = pd_remove,
-    .
-};
-// --- device ---
-static const struct file_operations dev_fops = {
-	.read           = dev_read,
-	.write          = dev_write,
-	.open           = dev_open,
-	.release        = dev_release,
-	.unlocked_ioctl = dev_ioctl,
-};
-
-struct _dev_info {
-	struct cdev dev;
-	dev_t evt;
-	unsigned int dev_major;
-	struct class * dev_class;
-	struct device * dev_device;
-};
-static struct _dev_info *dev_info;
-
-/*------------ device parameter declaration end -------------------*/
-
-
-static int __init dev_init(void)
+static int pd_probe(struct platform_device *pdev)
 {
-
 	int ret = 0;
 	dev_t dev_no;
 
@@ -195,9 +243,9 @@ static int __init dev_init(void)
 	dev_no = MKDEV(node_major, 0);
 
 	if (node_major) {
-		register_chrdev_region(dev_no, 1, device_name);
+		register_chrdev_region(dev_no, 1, DEV_NAME);
 	} else {
-		ret = alloc_chrdev_region(&dev_no, 0, 1, device_name);
+		ret = alloc_chrdev_region(&dev_no, 0, 1, DEV_NAME);
 		if (ret < 0) {
 			err_msg("alloc_chrdev_region error");
 			goto out;
@@ -235,7 +283,7 @@ static int __init dev_init(void)
 	#define class_create(owner, name)
 	-------------------------------------------------------------------------------------------*/
 	usr_msg("ready to create device class.");
-	dev_info->dev_class = class_create(THIS_MODULE, device_cls_name);
+	dev_info->dev_class = class_create(THIS_MODULE, DEV_CLS_NAME);
 	if (IS_ERR(dev_info->dev_class))
 	{
 		err_msg("class create error");
@@ -247,11 +295,11 @@ static int __init dev_init(void)
 	/*------------------------------------------------------------------------------------------
 	struct device *device_create(struct class *class, struct device *parent,
 			     dev_t devt, void *drvdata, const char *fmt, ...)
-	#endif
+
 	--->create /dev/char_device_driver point
 	-------------------------------------------------------------------------------------------*/
 	usr_msg("ready to create device in path /dev/.");
-	dev_info->dev_device = device_create(dev_info->dev_class, NULL, dev_no, NULL, "%s", device_name);
+	dev_info->dev_device = device_create(dev_info->dev_class, NULL, dev_no, NULL, "%s", DEV_NAME);
 	if (IS_ERR(dev_info->dev_device))
 	{
 		err_msg("device create error");
@@ -274,10 +322,9 @@ err_kmalloc:
 	unregister_chrdev_region(dev_no, 1);
 out:
 	return ret;
-
 }
 
-static void __exit dev_exit(void)
+static int pd_remove(struct platform_device * pdev)
 {
 	usr_msg("ready to remove driver");
 	device_destroy(dev_info->dev_class, dev_info->evt);
@@ -286,13 +333,29 @@ static void __exit dev_exit(void)
 	unregister_chrdev_region(dev_info->evt, 1);
 	kfree(dev_info);
 	usr_msg("driver has been removed");
+    return 0;
 }
-module_init(dev_init);
-module_exit(dev_exit);
+
+static int __init platform_drv_init(void)
+{
+	int ret;
+	usr_msg("platform_driver_register");
+    ret = platform_driver_register(&pd_driver);
+    return ret;
+}
+static void __exit platform_drv_exit(void)
+{
+	usr_msg("platform_driver_unregister");
+    platform_driver_unregister(&pd_driver);
+}
+module_init(platform_drv_init);
+module_exit(platform_drv_exit);
 
 module_param(node_major, int, S_IRUGO);
 
 MODULE_AUTHOR("QUAN");
 MODULE_LICENSE("GPL");
 MODULE_DESCRIPTION("platform char device test");
+
+//module_platform_driver(pd_driver);
 
