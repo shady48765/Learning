@@ -42,6 +42,7 @@ clean_trash:
 	rm -rf .tmp_versions
 	rm -rf *odul*.*
 	rm -rf .cache.mk
+	rm -rf *.mod.c
 install:
 	@echo "---> install module $(temp_drv)"
 	$(shell sudo insmod $(temp_drv))
