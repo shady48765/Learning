@@ -84,32 +84,7 @@
 		regulator-max-microvolt = <1500000>;
 		vin-supply = <&reg_vcc3v3>;
 	};
-	// gpio port PA10 2018-11-06
-	leds {
-	compatible = "gpio-trigger";
-	pinctrl-names = "default";
-	pinctrl-0 = <&leds_npi>, <&leds_r_npi>;
-		pwr {
-			label = "nanopi:trigger:pwr";
-			gpios = <&r_pio 0 9 GPIO_ACTIVE_HIGH>;
-			default-state = "off";
-		};
-		status {
-			label = "nanopi:trigger:status";
-			gpios = <&pio 0 9 GPIO_ACTIVE_HIGH>;
-			linux,default-trigger = "heartbeat";
-		};
-	};
 };
-
-&pio {
-    leds_npi: led_pins@0 {
-        pins = "PA9";
-        function = "gpio_out";
-    };
-
-};
-
 
 &cpu0 {
 	operating-points = <
