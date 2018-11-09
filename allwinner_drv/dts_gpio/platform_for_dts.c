@@ -3,7 +3,7 @@
 #include <linux/platform_device.h>
 #include <linux/property.h>
 
-int pd_probe(struct platform_device *pdev)
+int myprobe(struct platform_device *pdev)
 {
     struct fwnode_handle *child;    
     const char *p, *p2[2];
@@ -70,9 +70,9 @@ int pd_probe(struct platform_device *pdev)
     return 0;
 }
 
-int pd_remove(struct platform_device *pdev)
+int myremove(struct platform_device *pdev)
 {
-    printk(KERN_ERR"in pd_remove ...\n");
+    printk(KERN_ERR"in myremove ...\n");
     return 0;
 }
 
@@ -81,8 +81,6 @@ struct of_device_id ids[] = {
     {.compatible = "mydt,test"},
     {},
 };
-    
-MODULE_DEVICE_TABLE(of, ids);
 
 struct platform_driver pdrv = {
     .driver = {
@@ -91,13 +89,9 @@ struct platform_driver pdrv = {
         .of_match_table = ids,
     },
 
-    .probe = pd_probe,
-    .remove = pd_remove,
+    .probe = myprobe,
+    .remove = myremove,
 };
 
 module_platform_driver(pdrv);
-
 MODULE_LICENSE("GPL");
-MODULE_AUTHOR("QUAN");
-MODULE_DESCRIPTION("no");
-MODULE_VERSION("test_1.0");
