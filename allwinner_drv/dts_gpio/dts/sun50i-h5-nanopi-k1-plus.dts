@@ -84,48 +84,34 @@
 		regulator-max-microvolt = <1500000>;
 		vin-supply = <&reg_vcc3v3>;
 	};
-
-	/*-------- add 2018-11-08 ----- machester -------------*/
-	mydts@123456 {
-		compatible = "mydt, test";
-		hello = "hello world";
-		what = "shift";
-		hehe = <88>, <99>;
-		haha = <33>;
-		mymac = [11 22 33 44 55 66];
-		
-		dt1 {
-			hello = "hello", "dt1";
-			what = "what dt1";
-			hehe = <22>, <88>;
-			haha = <99>;
-			mymac = [11 22 33 44 55 66];
-		};
-        dt2 {
-			hello = "hello", "dt2";
-			what = "what dt2";
-			hehe = <11>, <44>;
- 			haha = <55>;
- 			mymac = [11 22 33 44 55 66];
-        };
-	};
-	/*-----------------------------------------------------*/	
-
-
-
-
-
-
-
-
-
+	
 	laser: laserflash {
-		compatible = "laser-pin, laserflash-pin";
-		
+		compatible = "nano, laser-pin", "nano,laserflash-pin";
 		pinctrl-names = "default";
 		pinctrl-0 = <&laser_ctrl_pin>;
-		reset-gpios = <&laser_pin 0 10 GPIO_ACTIVE_LOW>; /* PL7 */
-		post-power-on-delay-ms = <1000>;
+		reset-gpios = <&laser_pin 0 9 GPIO_ACTIVE_LOW>; /* PA9 */
+		default-state = "on"
+		gpio-controller;
+		interrupt-controller;
+		#interrupt-cells = <1>;
+	};
+};
+
+&laser {
+	
+
+
+
+	set {
+	
+
+
+	};
+	reset {
+	
+
+
+
 	};
 };
 
@@ -335,5 +321,6 @@
 	laser_ctrl_pin: laser_ctrl_pin {
 		pins = "PA10";
 		function = "gpio_out";
+		status = "okay";
     };
 };

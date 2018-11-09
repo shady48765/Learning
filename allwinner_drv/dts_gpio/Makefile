@@ -7,9 +7,9 @@ KER_DIR = /home/parallels/np_k1/linux
 CUR_DIR = $(shell pwd)
 
 # Kernel modules
-obj-m += platform_for_dts.o
+obj-m += dts_gpio_drv.o
 # module install name
-MODULE_NAME = platform_for_dts
+MODULE_NAME = dts_gpio_drv
 
 all : kernel_modules
 
