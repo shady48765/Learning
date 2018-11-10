@@ -44,12 +44,11 @@
 	};
     /*--- 2018-11-09 --- add gpio output pin PA_09 ------*/	
 	laser {
-		compatible = "laser-pin", "laserflash-pin";
+		compatible = "nano, laser-pin", "nano, laserflash-pin";
 		pinctrl-names = "gpio_laser";
 		pinctrl-0 = <&laser_ctrl_pin>;
         status{
             label = "nanopi:laser:status";
-            //gpios = <&laser_io 0 9 GPIO_ACTIVE_HIGH>;
             gpios = <&pio 0 9 GPIO_ACTIVE_HIGH>;
             default-status = "on";
         };
@@ -61,14 +60,6 @@
         function = "gpio_out";
     };
 };
-/**
-&laser_io {
-    laser_ctrl_pin: laser_pin@0 {
-        pins = "PA9";
-        function = "gpio_out";
-    };
-};
-**/
 /*----------------- add end ---------------------------*/
 
 &cpu0 {
