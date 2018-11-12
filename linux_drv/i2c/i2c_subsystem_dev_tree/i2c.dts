@@ -1,0 +1,10 @@
+&i2c2 { 											/* Phandle of the bus node */
+	pcf8523: rtc@68 {
+	compatible = "nxp,pcf8523";
+	reg = <0x68>;
+	};
+eeprom: ee24lc512@55 { 								/* eeprom device */
+	compatible = "packt,ee24lc512";
+	reg = <0x55>;
+	};
+};
