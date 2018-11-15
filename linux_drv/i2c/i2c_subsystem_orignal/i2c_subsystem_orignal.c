@@ -21,7 +21,7 @@ struct _eerom_private{
 };
 struct _eerom_info{
 	struct i2c_client *client;                  // record probe中client
-	struct miscdevice miscdev;                  // using misc device to allocate device node
+	struct miscdevice *miscdev;                  // using misc device to allocate device node
 	struct _eerom_private *eerom_private;        // specific i2c device private data 
 };
 struct _eerom_info * eerom_info;
@@ -235,11 +235,11 @@ int eerom_i2c_probe(struct i2c_client *client, const struct i2c_device_id *id)
 	eerom_info->client = client;
     
     //step 2:
-    eerom_info->miscdev.minor = MISC_DYNAMIC_MINOR;
-    eerom_info->miscdev.name = USR_DEV_NAME;
-    eerom_info->miscdev.fops = &eerom_fops;
+    eerom_info->miscdev->minor = MISC_DYNAMIC_MINOR;
+    eerom_info->miscdev->name = USR_DEV_NAME;
+    eerom_info->miscdev->fops = &eerom_fops;
 
-	ret = misc_register(&eerom_info->miscdev);
+	ret = misc_register(eerom_info->miscdev);
     if(ret) {
         printk(KERN_ERR "misc_register error");
         goto err_misc_register;
@@ -259,7 +259,7 @@ err_kzmalloc:
 int eerom_i2c_remove(struct i2c_client *client)
 {
 	
-	misc_deregister(&eerom_info->miscdev);
+	misc_deregister(eerom_info->miscdev);
 	kfree(eerom_info);
 	return 0;
 }
