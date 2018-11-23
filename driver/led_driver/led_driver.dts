@@ -1,0 +1,14 @@
+// file path = debian_kernel/arch/arm/boot/dts/
+// add 2018-11-23 by quan
+
+// add 2018-11-23 by quan
+blink-leds {
+    compatible = "blink-leds";
+
+    led-on = <&gpio5 3 GPIO_ACTIVE_HIGH>;
+    led-off = <&gpio5 3 GPIO_ACTIVE_LOW>;
+
+    // pinctrl-names = "default";
+    // pinctrl-0 = <&pwrbtn>;
+    status = "ok";
+};
