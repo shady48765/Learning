@@ -32,9 +32,18 @@
 /*------------ global parameter declaration start -------------------*/
 #define CHR_IOC_MAGIC 'G'
 
+static const struct of_device_id get_dts_info();
+
 /*------------ global parameter declaration end -------------------*/
 
-/*----------------------- ctrl_cdev_ioctl -------------------------------*/
+static const struct of_device_id get_dts_info()
+{
+    of_match_node()
+            const struct of_device_id *of_match_node(const struct of_device_id *matches,
+					 const struct device_node *node)
+
+}
+
 
 static int dev_open(struct inode *inode, struct file *filp)
 {
@@ -50,15 +59,7 @@ static int dev_release(struct inode *inode, struct file *filp)
 	// device restore code
 	return 0;
 }
-/**
- * protatype : static inline int copy_to_user(void __user volatile *to, const void *from,
-			       unsigned long n)
- * @param  flip    [description]
- * @param  buff    [description]
- * @param  counter [description]
- * @param  fops    [description]
- * @return         [description]
- */
+
 static ssize_t dev_read(struct file *flip, char __user *buff, size_t counter,
 						loff_t *fops)
 {
@@ -68,16 +69,7 @@ static ssize_t dev_read(struct file *flip, char __user *buff, size_t counter,
 	usr_msg("device read finished.");
 	return 0;
 }
-/*-----------------------------------------------------------------------------------
-* @Description : write function for linux driver lever
-*                apllication lever ---> ssize_t write(int fd, const void *buf, size_t count);
-* @Param Description :
-*    (struct file * flip) :
-*    (const char __user * buff) :
-*    (size_t count) : set counter max is four
-*    (loff_t * fops) :
-* @Return value :
-------------------------------------------------------------------------------------*/
+
 static ssize_t dev_write(struct file *flip, const char __user *buff,
 						 size_t counter, loff_t *fops)
 {
@@ -87,14 +79,7 @@ static ssize_t dev_write(struct file *flip, const char __user *buff,
 	usr_msg("device write");
 	if (counter < 0 || counter > 4)
 		return -EINVAL;
-	/**
-	 * prototype : copy_from_user(void *to, const void __user *from, unsigned long size)
-	 * parameter to : copy user data to. void * format
-	 * parameter from : copy user data from. normally is a buff
-	 * parameter size : numbers of data need to be copied
-	 * return value : 0 for success, > 0 for error
-	 *
-	 */
+
 	ret = copy_from_user(&value, buff, counter);
 	if (ret > 0)
 	{
@@ -135,10 +120,10 @@ static const char *device_cls_name = "test_chrdev_cls";
 static unsigned int node_major = 0;
 
 static const struct file_operations dev_fops = {
-	.read = dev_read,
-	.write = dev_write,
-	.open = dev_open,
-	.release = dev_release,
+	.read           = dev_read,
+	.write          = dev_write,
+	.open           = dev_open,
+	.release        = dev_release,
 	.unlocked_ioctl = dev_ioctl,
 };
 
@@ -153,7 +138,10 @@ struct _dev_info
 static struct _dev_info *dev_info;
 
 /*------------ device parameter declaration end -------------------*/
-
+/**
+ * [dev_init description]
+ * @return  [description]
+ */
 static int __init dev_init(void)
 {
 
@@ -203,13 +191,7 @@ static int __init dev_init(void)
 		ret = -ENOMEM;
 		goto err_cdev_add;
 	}
-	usr_msg("module init successed.");
-	//----------- char device creat finished ------------------
-	//----------- char device class create start --------------
-	/*------------------------------------------------------------------------------------------
-	// add char_device_driver to class
-	#define class_create(owner, name)
-	-------------------------------------------------------------------------------------------*/
+
 	usr_msg("ready to create device class.");
 	dev_info->dev_class = class_create(THIS_MODULE, device_cls_name);
 	if (IS_ERR(dev_info->dev_class))
@@ -218,14 +200,7 @@ static int __init dev_init(void)
 		ret = PTR_ERR(dev_info->dev_class);
 		goto err_class_create;
 	}
-	//----------- char device class create end ----------------
-	//----------- char device devices create start --------------
-	/*------------------------------------------------------------------------------------------
-	struct device *device_create(struct class *class, struct device *parent,
-			     dev_t devt, void *drvdata, const char *fmt, ...)
-	#endif
-	--->create /dev/char_device_driver point
-	-------------------------------------------------------------------------------------------*/
+
 	usr_msg("ready to create device in path /dev/.");
 	dev_info->dev_device = device_create(dev_info->dev_class, NULL, dev_no, NULL, "%s", device_name);
 	if (IS_ERR(dev_info->dev_device))
@@ -271,13 +246,3 @@ MODULE_AUTHOR("QUAN");
 MODULE_LICENSE("GPL");
 MODULE_DESCRIPTION("test char device driver");
 
-#if 0
-[Tue Nov  6 09:21:01 2018] full_func_chrdev: exports duplicate symbol dev_open (owned by kernel)
--------------------------------------------------------------------------------------------------
-EXPORT_SYMBOL(dev_write);
-EXPORT_SYMBOL(dev_open);
-EXPORT_SYMBOL(dev_read);
-EXPORT_SYMBOL(dev_release);
-EXPORT_SYMBOL(dev_init);
-EXPORT_SYMBOL(dev_exit);
-#endif
