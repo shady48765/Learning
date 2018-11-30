@@ -1,0 +1,17 @@
+#
+# Touchscreen driver configuration
+#
+if TOUCHSCREEN_MTK_GSLX688
+
+endif
+
+config TP_PROXIMITY_SUPPORT
+	bool "GSLX688 for TPD_PROXIMITY_SUPPORT"
+	default n
+	help
+	  Say Y here if you have GSLX688 TPD_PROXIMITY.
+
+	  If unsure, say N.
+
+	  To compile this dirver as a module, choose M here: the
+	  module will be called.
