@@ -177,16 +177,34 @@ static long dev_ioctl(struct file *flip, unsigned int cmd, unsigned long param)
 
 static int laser_probe(struct platform_device * laser_pdev)
 {
-	int index;
+	int index, flag, ret;
 	struct device * dev = &laser_pdev->dev;
 	struct device_node * laser_node = laser_pdev->dev.of_node;
 
-	// laser_node = of_find_compatible_node(NULL, NULL, LASER_NAME);
+	prinkt(KERN_ERR "-------> [move in laser probe] (%s)\n", __func__);
 
+	laser_gpio = of_get_named_gpio_flags(device_node, LASER_NAME, 0, &flag);
+	if(!gpio_is_valid(laser_gpio)) {
+		prinkt(KERN_ERR "-------> gpio not valid\n");
+		return -ERR;
+	}
+	ret = gpio_request(laser_gpio, LASER_NAME);
+	if(ret != 0) {
+		gpio_free(laser_gpio);
+		return -EIO;
+	}
+
+	gpio _direction_output(laser_gpio, GPIO_HIGH);
+	for(index = 0; index < 10; index++) {
+		gpio_set_value(laser_gpio, GPIO_LOW);
+		mdelay(10000);
+		gpio_set_value(laser_gpio, GPIO_HIGH);
+		mdelay(10000);
+	}
+	
+	printk("[%s] [%d] \n", __func__, __LINE__);
 
 	return 0;
-
-
 }
 static int laser_remove(struct platform_device * laser_pdev)
 {
