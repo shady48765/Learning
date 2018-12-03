@@ -14,12 +14,19 @@
 #include <linux/printk.h>
 #include <linux/major.h>
 #include <linux/device.h>
+#include <linux/pinctrl/pinctrl.h>
+#include <linux/of.h>
+#include <linux/of_gpio.h>
+#include <linux/gpio.h>
+#include <asm/uaccess.h>
+#include <linux/err.h>
+
 
 /*--------------------- macro defined start --------------------------*/
-#define usr_msg(args)                       \
-	do                                      \
-	{                                       \
-		printk(KERN_ERR "---> %s\n", args); \
+#define usr_msg(args)                           \
+	do                                          \
+	{                                           \
+		printk(KERN_ERR "-------> %s\n", args); \
 	} while (0)
 
 #define err_msg(args)                           \
@@ -31,17 +38,69 @@
 /*------------ global parameter declaration start -------------------*/
 #define CHR_IOC_MAGIC 'G'
 
-// static int get_dts_info(void);
+#define LASER_NAME			"laser"
+#define NODE_FROM			NULL
+struct device_node	* laser_node;
+
+
+
+typedef enum {
+	on = 1,
+	off = 0
+}_gpio_status_enum;
+_gpio_status_enum gpio_status;
+
+
+static struct _laser_pin_info {
+	unsigned int laser_gpio;
+};
+static struct _laser_pin_info laser_pin_info;
+
+static const struct file_operations dev_fops = {
+	.read           = dev_read,
+	.write          = dev_write,
+	.open           = dev_open,
+	.release        = dev_release,
+	.unlocked_ioctl = dev_ioctl,
+};
+
+struct _dev_info
+{
+	struct cdev dev;
+	dev_t evt;
+	unsigned int dev_major;
+	struct class *dev_class;
+	struct device *dev_device;
+};
+static struct _dev_info *dev_info;
+
+
+
+static int get_dts_info(const char * compat);
+
 
 /*------------ global parameter declaration end -------------------*/
 
-static int get_dts_info(void)
+static int get_dts_info(const char * compat)
 {
-    // of_match_node()
-    //         const struct of_device_id *of_match_node(const struct of_device_id *matches,
-	// 				 const struct device_node *node)
+	int ret;
+	ret = of_machine_is_compatible(LASER_NAME);
+	if(ret < 0) {
+
+	}
+
+	laser_node = of_find_compatible_node(NODE_FROM, NULL, compat);
+	if(!laser_node) {
+		err_msg("malloc error");
+		goto err_find_node;
+	}
+
 
 	return 0;
+
+err_find_node:
+	return ERR;
+
 }
 
 
@@ -114,129 +173,69 @@ static long dev_ioctl(struct file *flip, unsigned int cmd, unsigned long param)
 	return 0;
 }
 
-/*------------ device parameter declaration start -------------------*/
-static const char *device_name = "test_char_dev";
-static const char *device_cls_name = "test_chrdev_cls";
-static unsigned int node_major = 0;
 
-static const struct file_operations dev_fops = {
-	.read           = dev_read,
-	.write          = dev_write,
-	.open           = dev_open,
-	.release        = dev_release,
-	.unlocked_ioctl = dev_ioctl,
-};
 
-struct _dev_info
+static int laser_probe(struct platform_device * laser_pdev)
 {
-	struct cdev dev;
-	dev_t evt;
-	unsigned int dev_major;
-	struct class *dev_class;
-	struct device *dev_device;
-};
-static struct _dev_info *dev_info;
+	int index;
+	struct device * dev = &laser_pdev->dev;
+	struct device_node * laser_node = laser_pdev->dev.of_node;
 
-/*------------ device parameter declaration end -------------------*/
-/**
- * [dev_init description]
- * @return  [description]
- */
-static int __init dev_init(void)
-{
+	// laser_node = of_find_compatible_node(NULL, NULL, LASER_NAME);
 
-	int ret = 0;
-	dev_t dev_no;
-
-	//----------- char device creat start --------------
-	usr_msg("module init start");
-
-	dev_no = MKDEV(node_major, 0);
-
-	if (node_major)
-	{
-		register_chrdev_region(dev_no, 1, device_name);
-	}
-	else
-	{
-		ret = alloc_chrdev_region(&dev_no, 0, 1, device_name);
-		if (ret < 0)
-		{
-			err_msg("alloc_chrdev_region error");
-			goto out;
-		}
-		node_major = MAJOR(dev_no);
-	}
-
-	dev_info = kmalloc(sizeof(struct _dev_info), GFP_KERNEL);
-	//dev_info = kmalloc(sizeof(struct _dev_info), GFP_ATOMIC);
-	if (!dev_info)
-	{
-		err_msg("kmalloc error");
-		ret = -ENOMEM;
-		goto err_kmalloc;
-	}
-	// store node_major to device info structure
-	dev_info->dev_major = node_major;
-	dev_info->evt = MKDEV(dev_info->dev_major, 0);
-
-	//-------- set device info, fill struct cdev ------
-	cdev_init(&dev_info->dev, &dev_fops);
-	//cdev_init has memset(cdev, 0, sizeof *cdev);
-	dev_info->dev.owner = THIS_MODULE;
-	ret = cdev_add(&dev_info->dev, dev_no, 1);
-	if (ret)
-	{
-		err_msg("cdev add error");
-		ret = -ENOMEM;
-		goto err_cdev_add;
-	}
-
-	usr_msg("ready to create device class.");
-	dev_info->dev_class = class_create(THIS_MODULE, device_cls_name);
-	if (IS_ERR(dev_info->dev_class))
-	{
-		err_msg("class create error");
-		ret = PTR_ERR(dev_info->dev_class);
-		goto err_class_create;
-	}
-
-	usr_msg("ready to create device in path /dev/.");
-	dev_info->dev_device = device_create(dev_info->dev_class, NULL, dev_no, NULL, "%s", device_name);
-	if (IS_ERR(dev_info->dev_device))
-	{
-		err_msg("device create error");
-		ret = PTR_ERR(dev_info->dev_device);
-		goto err_device_create;
-	}
-	usr_msg("module has been created.");
-	//----------- char device devices create end ----------------
 
 	return 0;
 
-//---------------- division line ----------------------
-err_device_create:
-	class_destroy(dev_info->dev_class);
-err_class_create:
-	cdev_del(&dev_info->dev);
-err_cdev_add:
-	kfree(dev_info);
-err_kmalloc:
-	unregister_chrdev_region(dev_no, 1);
-out:
-	return ret;
+
+}
+static int laser_remove(struct platform_device * laser_pdev)
+{
+	gpio_free(laser_pin_info.laser_gpio);
+	return 0;
+}
+
+
+
+
+static struct of_device_id laser_table[] = {
+	{.compatible = "laser",},
+	{ },
+};
+MODULE_DEVICE_TABLE(of, laser_table);
+
+
+static struct platform_driver laser_driver = {
+	.probe = laser_probe,
+	.remove = laser_remove,
+	.driver = {
+		.name = "laser_driver",
+		.owner = THIS_MODULE,
+		.of_match_table = of_match_ptr(laser_driver),
+	},
+};
+
+static int __init dev_init(void)
+{
+	int ret;
+	printk(KERN_ERR "---------> move in function : %s", __func__);
+	ret = platform_driver_register(&laser_driver);
+	if(ret < 0) {
+		printk(KERN_ERR "---------> function : %s", __func__);
+	}
+	printk(KERN_ERR "---------> move out function : %s", __func__);
+	return 0;
 }
 
 static void __exit dev_exit(void)
 {
-	usr_msg("ready to remove driver");
-	device_destroy(dev_info->dev_class, dev_info->evt);
-	class_destroy(dev_info->dev_class);
-	cdev_del(&dev_info->dev);
-	unregister_chrdev_region(dev_info->evt, 1);
-	kfree(dev_info);
-	usr_msg("driver has been removed");
+	printk(KERN_ERR "---------> move in function : %s", __func__);
+	platform_driver_unregister(&laser_driver);
+	printk(KERN_ERR "---------> move out function : %s", __func__);
 }
+
+
+
+
 module_init(dev_init);
 module_exit(dev_exit);
 
@@ -244,4 +243,5 @@ module_param(node_major, int, S_IRUGO);
 
 MODULE_AUTHOR("QUAN");
 MODULE_LICENSE("GPL");
+MODULE_ALIAS("laser driver");
 MODULE_DESCRIPTION("test char device driver");
