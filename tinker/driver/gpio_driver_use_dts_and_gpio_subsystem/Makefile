@@ -5,10 +5,12 @@
 # ------------------------------------------------------- #
 # get system verison
 KVERS = $(shell uname -r)
-# # Kernel modules
-# obj-m += full_func_chrdev.o
+
 # module install name
-MODULE_NAME = laser
+MODULE_NAME = gpio
+
+# module test app name
+APP_NAME_NAME = gpio_app
 
 CROSS_COMPILE = arm-linux-gnueabihf-
 CC = $(CROSS_COMPILE)gcc
@@ -24,15 +26,15 @@ all : kernel_modules
 
 kernel_modules:
 	make -C $(KERNEL_DIR) M=$(CUR_DIR) modules ARCH=arm CROSS_COMPILE=arm-linux-gnueabihf-
-	# $(CC) $(APP).c -o $(APP)
+	# $(CC) $(APP_NAME_NAME).c -o $(APP_NAME_NAME)
 	@echo "---> build finished."
 
 app :
-	$(CC) $(APP).c -o $(APP)
+	$(CC) $(APP_NAME).c -o $(APP_NAME)
 
 clean :
 	make -C $(KERNEL_DIR) M=$(CUR_DIR) clean
-	rm -rf $(APP)
+	rm -rf $(APP_NAME)
 	rm -rf .*.?.sw?p
 	rm -rf .*.?.swp
 	@echo "---> clean trash finished."

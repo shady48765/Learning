@@ -1,26 +1,37 @@
-/*----------------------------------------------------------------------*
- * Data : 2018-10-02
- * using struct cdev to register char device
- * creat class for device
- * fill read, write, ioctl, close
+/**
+ * using gpio subsystem to control gpio
+ * not contain interrupt, using gpio subsystem to request gpio and get the gpio status
  *
- *----------------------------------------------------------------------*/
-#include <linux/module.h>
-#include <linux/fs.h>
-#include <linux/init.h>
+ *
+ * dts for this file with platform tinker board s
+ * 	// file : rk3288-miniarm.dts
+ *   laser {
+ *               compatible = "laser";
+ *               label = "laser prot";
+ *
+ *               laser-on = <&gpio5 RK_PC3 GPIO_ACTIVE_HIGH>;
+ *               laser-off = <&gpio5 RK_PC3 GPIO_ACTIVE_LOW>;
+ *               status = "okay";
+ *   };
+ */
+
 #include <linux/cdev.h>
+#include <linux/device.h>
+#include <linux/err.h>
+#include <linux/fs.h>
+#include <linux/gpio.h> 					/* For Legacy integer based GPIO */
+#include <linux/init.h>
+#include <linux/interrupt.h> 				/* For IRQ */
+#include <linux/kernel.h>
+#include <linux/major.h>
+#include <linux/module.h>
+#include <linux/of.h> 						/* For DT*/
+#include <linux/of_gpio.h> 					/* For of_gpio* functions */
+// #include <linux/pinctrl/pinctrl.h>
+#include <linux/platform_device.h> 			/* For platform devices */
+#include <linux/printk.h>
 #include <linux/slab.h>
 #include <linux/uaccess.h>
-#include <linux/printk.h>
-#include <linux/major.h>
-#include <linux/device.h>
-#include <linux/pinctrl/pinctrl.h>
-#include <linux/of.h>
-#include <linux/of_gpio.h>
-#include <linux/gpio.h>
-#include <asm/uaccess.h>
-#include <linux/err.h>
-
 
 /*--------------------- macro defined start --------------------------*/
 #define usr_msg(args)                           \
@@ -38,11 +49,10 @@
 /*------------ global parameter declaration start -------------------*/
 #define CHR_IOC_MAGIC 'G'
 
-#define LASER_NAME			"laser"
-#define NODE_FROM			NULL
-struct device_node	* laser_node;
-
-
+#define DRIVER_NAME				"laser_driver"
+#define LASER_NAME				"laser"
+#define NODE_FROM				NULL
+// struct device_node	* laser_node;
 
 typedef enum {
 	on = 1,
@@ -79,35 +89,14 @@ static struct _dev_info *dev_info;
 static int get_dts_info(const char * compat);
 
 
-/*------------ global parameter declaration end -------------------*/
 
-static int get_dts_info(const char * compat)
-{
-	int ret;
-	ret = of_machine_is_compatible(LASER_NAME);
-	if(ret < 0) {
-
-	}
-
-	laser_node = of_find_compatible_node(NODE_FROM, NULL, compat);
-	if(!laser_node) {
-		err_msg("malloc error");
-		goto err_find_node;
-	}
-
-
-	return 0;
-
-err_find_node:
-	return ERR;
-
-}
 
 
 static int dev_open(struct inode *inode, struct file *filp)
 {
 	usr_msg("device open and init");
 
+	// gpio_request();
 	// driver init function code
 	return 0;
 }
@@ -174,50 +163,42 @@ static long dev_ioctl(struct file *flip, unsigned int cmd, unsigned long param)
 }
 
 
-
+/**
+ * @Descripthon : laser_probe
+ * 		using gpio subsystem to request gpio and get the gpio status
+ */
 static int laser_probe(struct platform_device * laser_pdev)
 {
 	int index, flag, ret;
-	struct device * dev = &laser_pdev->dev;
+	printk(KERN_INFO "[%s] [%d] \n", __func__, __LINE__);
+
 	struct device_node * laser_node = laser_pdev->dev.of_node;
+	if(!laser_node) {
+          return -ENOENT;
+    }
+    laser_pin_info.laser_gpio = of_get_named_gpio(laser_node, "laser", 0);
 
-	prinkt(KERN_ERR "-------> [move in laser probe] (%s)\n", __func__);
-
-	laser_gpio = of_get_named_gpio_flags(device_node, LASER_NAME, 0, &flag);
-	if(!gpio_is_valid(laser_gpio)) {
-		prinkt(KERN_ERR "-------> gpio not valid\n");
-		return -ERR;
-	}
-	ret = gpio_request(laser_gpio, LASER_NAME);
-	if(ret != 0) {
-		gpio_free(laser_gpio);
-		return -EIO;
-	}
-
-	gpio _direction_output(laser_gpio, GPIO_HIGH);
-	for(index = 0; index < 10; index++) {
-		gpio_set_value(laser_gpio, GPIO_LOW);
-		mdelay(10000);
-		gpio_set_value(laser_gpio, GPIO_HIGH);
-		mdelay(10000);
-	}
-	
-	printk("[%s] [%d] \n", __func__, __LINE__);
+    gpio_request(laser_pin_info, "laser_pin");
+    gpio_direction_output(laser_pin_info.laser_pin);
+    gpio_set_value(laser_pin_info.laser_pin, gpio_status.on);
+    mdelay(1000);
+    
+	printk(KERN_INFO "[%s] [%d] \n", __func__, __LINE__);
 
 	return 0;
 }
 static int laser_remove(struct platform_device * laser_pdev)
 {
 	gpio_free(laser_pin_info.laser_gpio);
+	err_msg("laser_remove");
 	return 0;
 }
 
-
-
-
 static struct of_device_id laser_table[] = {
-	{.compatible = "laser",},
-	{ },
+    {
+        .compatible = "laser",
+    },
+    {/*sentinel*/},
 };
 MODULE_DEVICE_TABLE(of, laser_table);
 
@@ -226,40 +207,41 @@ static struct platform_driver laser_driver = {
 	.probe = laser_probe,
 	.remove = laser_remove,
 	.driver = {
-		.name = "laser_driver",
+		.name = DRIVER_NAME,
 		.owner = THIS_MODULE,
 		.of_match_table = of_match_ptr(laser_driver),
 	},
 };
 
-static int __init dev_init(void)
+
+static int __init gpio_init(void)
 {
 	int ret;
-	printk(KERN_ERR "---------> move in function : %s", __func__);
+	printk(KERN_INFO "---------> move in function (%s)\n", __func__);
 	ret = platform_driver_register(&laser_driver);
 	if(ret < 0) {
-		printk(KERN_ERR "---------> function : %s", __func__);
+		printk(KERN_ERR "---------> platform_driver_register error\n");
 	}
-	printk(KERN_ERR "---------> move out function : %s", __func__);
+	printk(KERN_INFO "---------> move out function (%s)\n", __func__);
 	return 0;
 }
 
-static void __exit dev_exit(void)
+static void __exit gpio_exit(void)
 {
-	printk(KERN_ERR "---------> move in function : %s", __func__);
+	printk(KERN_INFO "---------> move in function : %s", __func__);
 	platform_driver_unregister(&laser_driver);
-	printk(KERN_ERR "---------> move out function : %s", __func__);
+	printk(KERN_INFO "---------> move out function : %s", __func__);
 }
 
 
 
 
-module_init(dev_init);
-module_exit(dev_exit);
+module_init(gpio_init);
+module_exit(gpio_exit);
 
 module_param(node_major, int, S_IRUGO);
 
 MODULE_AUTHOR("QUAN");
 MODULE_LICENSE("GPL");
 MODULE_ALIAS("laser driver");
-MODULE_DESCRIPTION("test char device driver");
+MODULE_DESCRIPTION("gpio platform driver");
