@@ -7,18 +7,18 @@
 KVERS = $(shell uname -r)
 
 # module install name
-MODULE_NAME = gpio
+MODULE_NAME = gpio_subsystem
 
 # module test app name
-APP_NAME_NAME = gpio_app
+APP_NAME_NAME = app_gpio_subsystem
 
 CROSS_COMPILE = arm-linux-gnueabihf-
 CC = $(CROSS_COMPILE)gcc
 
 # Kernel modules
 obj-m += ${MODULE_NAME}.o
-
-KERNEL_DIR = /home/quan/tinker/debian_kernel
+KERNEL_DIR = /arm/tinker/debian_kernel
+# KERNEL_DIR = /home/quan/tinker/debian_kernel
 # get driver floder path
 CUR_DIR = $(shell pwd)
 
