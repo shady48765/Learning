@@ -10,15 +10,17 @@ KVERS = $(shell uname -r)
 MODULE_NAME = gpio_subsystem
 
 # module test app name
-APP_NAME_NAME = app_gpio_subsystem
+APP_NAME = app_gpio_subsystem
 
 CROSS_COMPILE = arm-linux-gnueabihf-
 CC = $(CROSS_COMPILE)gcc
 
 # Kernel modules
 obj-m += ${MODULE_NAME}.o
-KERNEL_DIR = /arm/tinker/debian_kernel
-# KERNEL_DIR = /home/quan/tinker/debian_kernel
+
+# kernel dir
+# KERNEL_DIR = /arm/tinker/debian_kernel
+KERNEL_DIR = /home/quan/tinker/debian_kernel
 # get driver floder path
 CUR_DIR = $(shell pwd)
 
@@ -26,7 +28,7 @@ all : kernel_modules
 
 kernel_modules:
 	make -C $(KERNEL_DIR) M=$(CUR_DIR) modules ARCH=arm CROSS_COMPILE=arm-linux-gnueabihf-
-	# $(CC) $(APP_NAME_NAME).c -o $(APP_NAME_NAME)
+	$(CC) $(APP_NAME).c -o $(APP_NAME)
 	@echo "---> build finished."
 
 app :
