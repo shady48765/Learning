@@ -7,10 +7,10 @@
 KVERS = $(shell uname -r)
 
 # module install name
-MODULE_NAME = gpio_subsystem
+MODULE_NAME = gpio_pinctrl
 
 # module test app name
-APP_NAME = app_gpio_subsystem
+APP_NAME = app_gpio_pinctrl
 
 CROSS_COMPILE = arm-linux-gnueabihf-
 CC = $(CROSS_COMPILE)gcc

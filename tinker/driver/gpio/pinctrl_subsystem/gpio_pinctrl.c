@@ -6,19 +6,25 @@
  *
  * dts for this file with platform tinker board s
  * 	// file : rk3288-miniarm.dts
-    laser {
-		compatible            = "laser-leds";
-        label                 = "laser_gpio";
-        linux,default-trigger = "default-off";
-        //pinctrl-names         = "default";
-        pinctrl-names         = "laser_pin";
-        pinctrl-0 = <&laser_pin>;
-	};
-    &laser_pin {
-        gpios = <&gpio5 RK_PC3 GPIO_ACTIVE_LOW>;
-        status = "okay";
-    
-    
+        laser {
+                compatible = "laser-pinctrl";
+                label = "laser-pinctrl";
+
+                pinctrl-name = "default";
+                pinctrl-0 = <&laser_pin>;
+        };
+&pinctrl {
+
+        laser_pin {
+
+                laser-on = <&gpio5 RK_PC3 GPIO_ACTIVE_HIGH, &pcfg_pull_down>;
+                laser-off = <&gpio5 RK_PC3 GPIO_ACTIVE_LOW, &pcfg_pull_down>;
+                status = "okay";
+        }
+        ......
+    }
+
+
  */
 #include <linux/cdev.h>
 #include <linux/device.h>
@@ -60,7 +66,7 @@
     do {                                                                    \
         printk(KERN_ERR "-------> [error] : "fmt, ##arg));                  \
     } while (0)
-    
+
 #define CHECK(expr)           \
         do {                  \
             int ret = (expr); \
