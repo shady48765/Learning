@@ -26,15 +26,16 @@ int main(int argc, char *argv[])
     int on = 0;
     int counter = 0;
 
-    printf("--> open /dev/test_char_dev, permisson read and write\n");
-    fd = open("/dev/test_char_dev", O_RDWR);
+    printf("--> open /dev/laser, permisson read and write\n");
+    fd = open("/dev/laser", O_RDWR);
     if (fd < 0)
     {
         perror("open");
         exit(1);
     }
     printf("--> open success. ready to send data:\n");
-    while (counter < 5)
+
+    while (counter < 50)
     {
         on = 1;
         printf("--> open success. ready to send data, data = %d\n", counter);
@@ -47,7 +48,10 @@ int main(int argc, char *argv[])
         }
         sleep(2);
         counter++;
+        if (3 == counter)
+            counter = 0;
     }
+
     printf("--> close fd\n");
     close(fd);
     return 0;
