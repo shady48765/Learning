@@ -6,21 +6,19 @@
  *
  * dts for this file with platform tinker board s
  * 	// file : rk3288-miniarm.dts
-        laser {
-                compatible = "laser-pinctrl";
-                label = "laser-pinctrl";
-
-                pinctrl-name = "default";
-                pinctrl-0 = <&laser_pin>;
-        };
+	laser_led {
+		compatible = "laser_led";
+		laser = <&gpio5, RK_PC3, GPIO_ACTIVE_LOW>;
+		label = "laser_pin";
+		pinctrl-name = "default";
+		pinctrl-0 = <&laser_blink>;
+		status = "okay";
+	};
 &pinctrl {
 
-        laser_pin {
-
-                laser-on = <&gpio5 RK_PC3 GPIO_ACTIVE_HIGH, &pcfg_pull_down>;
-                laser-off = <&gpio5 RK_PC3 GPIO_ACTIVE_LOW, &pcfg_pull_down>;
-                status = "okay";
-        }
+	laser_blink: laser-blink {
+		rockchip,pins = <RK_GPIO5, RK_PC3, &pcfg_pull_up>;
+	}
         ......
     }
 
@@ -39,12 +37,15 @@
 #include <linux/of.h>      /* For DT*/
 #include <linux/of_gpio.h> /* For of_gpio* functions */
 #include <linux/pinctrl/pinctrl.h>
+#include <linux/pinctrl/consumer.h>
+#include <linux/pinctrl/pinctrl-state.h>
 #include <linux/delay.h>
 #include <linux/gpio/consumer.h>
 #include <linux/platform_device.h> /* For platform devices */
 #include <linux/printk.h>
 #include <linux/slab.h>
 #include <linux/uaccess.h>
+#include <linux/mutex.h>
 
 /*--------------------- macro defined start --------------------------*/
 // #define usr_msg(args)                                               \
@@ -96,8 +97,17 @@ typedef enum {
     off = 0
 } _gpio_status_enum;
 _gpio_status_enum gpio_status;
+
 // set laser pin
 int laser_pin;
+
+typedef struct {
+    struct pinctrl          * laser_pinctrl;
+    struct pinctrl_state    * laser_state_on;
+    struct pinctrl_state    * laser_state_off
+}_pinctrl_info;
+_pinctrl_info * pinctrl_info;
+
 
 static const struct file_operations dev_fops = {
     .write          = dev_write,
@@ -185,20 +195,66 @@ static long dev_ioctl(struct file *flip, unsigned int cmd,
  */
 static int laser_probe(struct platform_device *pdev)
 {
-  int index, ret;
-  printk(KERN_INFO "(%s) [%d] \n", __func__, __LINE__);
+    int index, ret;
+    printk(KERN_INFO "(%s) [%d] \n", __func__, __LINE__);
 
-  dev_info = kmalloc(sizeof(struct device_info), GFP_KERNEL);
-  if (!dev_info) {
-    err_msg("dev_info kmalloc error");
+    dev_info = kmalloc(sizeof(struct device_info), GFP_KERNEL);
+    if (!dev_info) {
+    err_msg("dev_info kmalloc error\n");
     return -ENOMEM;
-  }
-  memset(dev_info, 0, sizeof(struct device_info));
+    }
+    memset(dev_info, 0, sizeof(struct device_info));
+
+
+
+
+    // -----------------> gpio get start
+    pinctrl_info = kmalloc(sizeof(_pinctrl_info), GFP_KERNEL);
+    if(!pinctrl_info) {
+        err_msg("pinctrl_info error\n");
+        return -ENOMEM;
+    }
+    memset(pinctrl_info, 0, sizeof(_pinctrl_info));
+
+
+    pinctrl_info->laser_pinctrl = devm_pinctrl_get(pdev->dev);
+    if(IS_ERR(pinctrl_info->laser_pinctrl)) {
+        err_msg("dev_pinctrl_get error [%d]\n", __LINE__);
+        return PTR_ERR(pinctrl_info->laser_pinctrl);
+    }
+    pinctrl_info->laser_state_on = pinctrl_lookup_state(pinctrl_info->laser_pinctrl, "laser_on");
+    if(IS_ERR(pinctrl_info->laser_state_on)) {
+        rr_msg("dev_pinctrl_get error [%d]\n", __LINE__);
+        return PTR_ERR(pinctrl_info->laser_state_on); 
+    }
+    pinctrl_info->laser_state_off = pinctrl_lookup_state(pinctrl_info->laser_pinctrl, "laser_off");
+    if(IS_ERR(pinctrl_info->laser_state_off)) {
+        rr_msg("dev_pinctrl_get error [%d]\n", __LINE__);
+        return PTR_ERR(pinctrl_info->laser_state_off); 
+    }
+    // select state
+    pinctrl_select_state(pinctrl_info->laser_pinctrl, pinctrl_info->laser_state_on);
+    mdelay(20);
+    pinctrl_select_state(pinctrl_info->laser_pinctrl, pinctrl_info->laser_state_off);
+    mdelay(20)
+    usr_msg("pinctrl state setted\n");
+    //  ----------------->gpio get end
+
+
+
+
+
+
+
+
+
+
+
 
   // -----------------> gpio get start
   struct device_node *laser_node = pdev->dev.of_node;
   if (!laser_node) {
-    err_msg("device node get error");
+    err_msg("device node get error\n");
     return -ENOENT;
   }
 
@@ -259,8 +315,6 @@ static int laser_probe(struct platform_device *pdev)
     ret = -ENOMEM;
     goto err_cdev_add;
   }
-  usr_msg("module cdev add successed.");
-
   usr_msg("ready to create device class.");
   dev_info->dev_class = class_create(THIS_MODULE, LASER_CLS_NAME);
   if (IS_ERR(dev_info->dev_class)) {

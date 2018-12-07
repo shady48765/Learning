@@ -1,11 +1,24 @@
-	// file : rk3288-miniarm.dts
-    laser {
-		compatible = "laser";
-		label = "laser prot";
+// file : rk3288-miniarm.dts
 
-		laser-on = <&gpio5 RK_PC3 GPIO_ACTIVE_HIGH>;        // ---> RK_PC3 defined in <dt-bindings/pinctrl/rockchip.h>
-		laser-off = <&gpio5 RK_PC3 GPIO_ACTIVE_LOW>;
-		// 		laser-on = <GPIO5_C3 GPIO_ACTIVE_LOW>;		---> need #include <dt-bindings/pinctrl/rockchip-rk3288.h>
-		// 		laser-on = <GPIO5_C3 GPIO_ACTIVE_LOW>;		---> need #include <dt-bindings/pinctrl/rockchip-rk3288.h>
+	laser_led {
+		compatible = "laser_led";
+		laser = <&gpio5, RK_PC3, GPIO_ACTIVE_LOW>;
+		label = "laser_pin";
+		pinctrl-name = "default";
+		pinctrl-0 = <&laser_blink>;
 		status = "okay";
 	};
+&pinctrl {
+
+        laser_pin {
+
+                laser-on = <&gpio5 RK_PC3 GPIO_ACTIVE_HIGH, &pcfg_pull_down>;
+                laser-off = <&gpio5 RK_PC3 GPIO_ACTIVE_LOW, &pcfg_pull_down>;
+                status = "okay";
+        }
+        {
+        	laser_blink: laser-blink {
+		rockchip,pins = <RK_GPIO5, RK_PC3, &pcfg_pull_up>;
+	}
+        ......
+    }
