@@ -10,15 +10,11 @@
 	};
 &pinctrl {
 
-        laser_pin {
+        laser_blink: laser-blink {
 
-                laser-on = <&gpio5 RK_PC3 GPIO_ACTIVE_HIGH, &pcfg_pull_down>;
-                laser-off = <&gpio5 RK_PC3 GPIO_ACTIVE_LOW, &pcfg_pull_down>;
-                status = "okay";
+                laser-on = <RK_GPIO5 RK_PC3 GPIO_ACTIVE_HIGH, &pcfg_pull_down>;
+                laser-off = <RK_GPIO5 RK_PC3 GPIO_ACTIVE_LOW, &pcfg_pull_down>;
         }
-        {
-        	laser_blink: laser-blink {
-		rockchip,pins = <RK_GPIO5, RK_PC3, &pcfg_pull_up>;
-	}
+
         ......
     }
