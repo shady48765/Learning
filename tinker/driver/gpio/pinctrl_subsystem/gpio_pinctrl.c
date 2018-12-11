@@ -1,39 +1,10 @@
+/**
+ * 
+ */
 
 #include "./gpio_pinctrl.h"
 
 
-typedef enum {
-    on  = 1,
-    off = 0
-} _gpio_status_enum;
-_gpio_status_enum   gpio_status;
-
-// set laser pin
-int laser_pin;
-
-typedef struct {
-    struct pinctrl          * laser_pinctrl;
-    struct pinctrl_state    * laser_state_on;
-    struct pinctrl_state    * laser_state_off
-}pinctrl_info;
-pinctrl_info * pin_info;
-
-struct device_info {
-    unsigned int    dev_major;
-    struct cdev     dev;
-    dev_t           dev_no;
-    struct class    *dev_class;
-    struct device   *dev_device;
-    struct mutex    laser_mutex;
-};
-static struct device_info *dev_info;
-
-static const struct file_operations dev_fops = {
-    .write          = laser_write,
-    .open           = laser_open,
-    .release        = laser_release,
-    .unlocked_ioctl = laser_ioctl,
-};
 
 static int laser_open(struct inode *inode, struct file *filp)
 {
@@ -95,6 +66,42 @@ static long laser_ioctl(struct file *flip, unsigned int cmd,
                       unsigned long param)
 {
     usr_msg("device dev_ioctl");
+    int delay_timer, ret, temp, gpio_status;
+
+
+        switch(cmd)
+    {
+        case GPIO_TEST :
+            printk("in key_drv_ioctl : test case\n");
+            break;
+
+        case GPIO_SET:
+            break;
+        case GPIO_RESET:
+            break;
+        case GPIO_BLINK:
+            temp = (int)param;
+            ret = copy_from_user(&delay_timer, param, sizeof(int));
+            if (ret != 0) {
+                err_msg("copy_from_user error");
+                return -EFAULT;
+            }
+            /*TODO : delay function*/
+            break;
+        case GPIO_STATUS:
+            gpio_status = -1;
+            /*TODO : read gpio status*/
+            ret = copy_to_user(flip, gpio_status, sizeof(int));
+            if (ret != 0) {
+                err_msg("copy_from_user error");
+                return -EFAULT;
+            }
+            break;
+        default:
+            usr_msg("unkown cmd");
+            return -ENOTTY;
+            break;
+    }
     return 0;
 }
 static int get_dts_info(struct device * laser_dev)
@@ -135,6 +142,13 @@ static int get_dts_info(struct device * laser_dev)
     return ret;
 }
 
+static const struct file_operations dev_fops = {
+    .write          = laser_write,
+    .open           = laser_open,
+    .release        = laser_release,
+    .unlocked_ioctl = laser_ioctl,
+};
+
 /**
  * @Descripthon : laser_probe
  * 		using gpio subsystem to request gpio and get the gpio status
@@ -143,6 +157,8 @@ static int get_dts_info(struct device * laser_dev)
 static int laser_probe(struct platform_device *pdev)
 {
     int index, ret;
+    ret = 0;
+    
     printk(KERN_ERR "---> (%s) [%d] \n", __func__, __LINE__);
 
     dev_info = kmalloc(sizeof(struct device_info), GFP_KERNEL);
@@ -278,7 +294,7 @@ static int laser_probe(struct platform_device *pdev)
         gpio_set_value(laser_pin, off);
         msleep(2000);
     }
-#endif
+
   return 0;
 
 err_device_create:
@@ -290,6 +306,8 @@ err_cdev_add:
 err_out:
     gpio_free(laser_pin);
     kfree(dev_info);
+    
+#endif
     return ret;
 }
 static int laser_remove(struct platform_device *pdev)

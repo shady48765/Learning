@@ -1,27 +1,6 @@
-/**
-	laser_led {
-		compatible = "laser_led";
-		laser = <&gpio5, RK_PC3, GPIO_ACTIVE_LOW>;
-		label = "laser_pin";
-		pinctrl-name = "default";
-		pinctrl-0 = <&laser_blink>;
-		status = "okay";
-	};
-    &pinctrl {
 
-        laser_blink: laser-blink {
-
-                laser-on = <RK_GPIO5 RK_PC3 GPIO_ACTIVE_HIGH, &pcfg_pull_down>;
-                laser-off = <RK_GPIO5 RK_PC3 GPIO_ACTIVE_LOW, &pcfg_pull_down>;
-        }
-
-        ......
-    }
-
-
- */
 #ifndef __GPIO_PINCTRL_H
-
+#define __GPIO_PINCTRL_H
 
 #include <linux/cdev.h>
 #include <linux/device.h>
@@ -47,58 +26,66 @@
 #include <linux/uaccess.h>
 #include <linux/mutex.h>
 
+#include "./common.h"
 
-
-
-/*--------------------- macro defined start --------------------------*/
-// #define usr_msg(args)                                               \
-//     do {                                                            \
-//         printk(KERN_ERR "-------> [%s] (%s)\n", args, __func__);    \
-//     } while (0)
-
-// #define err_msg(args)                                               \
-//     do {                                                            \
-//         printk(KERN_ERR "-------> [%s] (%s)\n", args, __func__);    \
-//     } while (0)
-
-#define usr_msg(fmt, arg...)                                        \
-    do {                                                            \
-        printk(KERN_ERR "-------> [info] :" fmt, ##arg);            \
+#define usr_msg(fmt, arg...)                                                                    \
+    do {                                                                                        \
+        printk(KERN_ERR "-------> [info] :(%s) [%d] " fmt "\n", __func__, __LINE__, ##arg);     \
     } while (0)
 
-#define err_msg(fmt, arg...)                                                \
-    do {                                                                    \
-        printk(KERN_ERR "-------> [error] : "fmt, ##arg));                  \
+#define err_msg(fmt, arg...)                                                                    \
+    do {                                                                                        \
+        printk(KERN_ERR "-------> [error] :(%s) [%d] " fmt "\n", __func__, __LINE__, ##arg);    \
     } while (0)
 
-#define CHECK(expr)           \
+#define CHECK(type expr)           \
         do {                  \
             int ret = (expr); \
             ASSERT(0 == ret); \
         }while(0)
         
-        
-#define CHR_IOC_MAGIC       'G'
-
 #define DRIVER_NAME         "laser_driver"
 #define LASER_NAME          "laser"
 #define LASER_CLS_NAME      "laser_class"
 #define NODE_FROM           NULL
-/*--------------------- macro defined end --------------------------*/
+
+
+typedef enum {
+    on  = 1,
+    off = 0
+} gpio_status_enum;
+gpio_status_enum   gpio_status;
+
+typedef struct {
+    struct pinctrl          * laser_pinctrl;
+    struct pinctrl_state    * laser_state_on;
+    struct pinctrl_state    * laser_state_off
+}pinctrl_info;
+pinctrl_info * pin_info;
+
+struct device_info {
+    unsigned int    dev_major;
+    struct cdev     dev;
+    dev_t           dev_no;
+    struct class    *dev_class;
+    struct device   *dev_device;
+    struct mutex    laser_mutex;
+};
+static struct device_info *dev_info;
+
+
+
+
 
 // struct device_node	* laser_node;
 static int get_dts_info(const char *compat);
 static int dev_open(struct inode *inode, struct file *filp);
 static int dev_release(struct inode *inode, struct file *filp);
 static ssize_t dev_write(struct file *flip, const char __user *buff,
-                         size_t counter, loff_t *fops) ;
-static long dev_ioctl(struct file *flip, unsigned int cmd,
-                      unsigned long param);
-
+                    size_t counter, loff_t *fops);
+static long laser_ioctl(struct file *flip, unsigned int cmd,
+                    unsigned long param);
 static int get_dts_info(struct device * dev);
 
 
-
-
 #endif
-/**--------------------------------------- END LINE -------------------------------------*/

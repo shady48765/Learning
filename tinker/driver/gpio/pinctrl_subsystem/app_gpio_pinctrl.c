@@ -18,38 +18,46 @@
 #include <fcntl.h>
 #include <unistd.h>
 #include <stdlib.h>
+#include <sys/ioctl.h>
+#include <fcntl.h>
+#include "./common.h"
+
+#define HIGH        1U
+#define LOW         0U
+
+struct pin_info {
+    unsigned int on;
+    unsigned int off;
+    int value;
+}
 
 int main(int argc, char *argv[])
 {
     int ret;
     int fd;
-    int on = 0;
     int counter = 0;
 
-    printf("--> open /dev/laser, permisson read and write\n");
+    struct pin_info laser_info;
+    laser_info.on = HIGH;
+    laser_info.off = LOW;
+    laser_info.value = -1;
+
+    printf("---> open /dev/laser, permisson read and write\n");
     fd = open("/dev/laser", O_RDWR);
-    if (fd < 0)
-    {
+    if (fd < 0) {
         perror("open");
         exit(1);
     }
-    printf("--> open success. ready to send data:\n");
+    printf("---> open success. ready to send data:\n");
 
-    while (counter < 50)
-    {
-        on = 1;
-        printf("--> open success. ready to send data, data = %d\n", counter);
-        //ret = write(fd, &on, 4);
-        ret = write(fd, &counter, 4);
-        if (ret < 0)
-        {
-            perror("write");
-            exit(1);
-        }
-        sleep(2);
-        counter++;
-        if (3 == counter)
-            counter = 0;
+    while (counter < 10) {
+        ioctl(fd, GPIO_TEST, 0);
+        ioctl(fd, GPIO_SET, &laser_info.on);
+        printf("<app>--- set on = %d\n", laser_info.on);
+        ioctl(fd, GPIO_RESET, &laser_info.off);
+        printf("<app>--- set off = %d\n", laser_info.off);
+        ioctl(fd, GPIO_STATUS, &laser_info.value);
+        printf("<app>--- gpio status = %d\n", laser_info.value);
     }
 
     printf("--> close fd\n");

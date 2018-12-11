@@ -1,0 +1,17 @@
+# gitignore
+# Untracked files:
+.vscode
+.idea
+cmake-build-debug
+*.o
+*.so
+*.db 
+.*.s*p
+*.o.cmd
+*.mode.o.cmd
+*.mode.c 
+*.mode.o
+*.order
+*.symvers
+.*.ko.cmd
+
