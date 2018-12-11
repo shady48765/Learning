@@ -1,0 +1,32 @@
+diff --git a/arch/arm/boot/dts/rk3288-miniarm.dts b/arch/arm/boot/dts/rk3288-miniarm.dts
+index d70f25d..4db1d1a 100755
+--- a/arch/arm/boot/dts/rk3288-miniarm.dts
++++ b/arch/arm/boot/dts/rk3288-miniarm.dts
+@@ -178,7 +178,12 @@
+ 			linux,default-trigger="default-off";
+ 		};
+ 	};
+-
++	laser {
++		compatible = "laser";
++	    laser-on = <&gpio5 3 GPIO_ACTIVE_HIGH>;
++	    laser-off = <&gpio5 3 GPIO_ACTIVE_LOW>;
++        status="ok"; 
++    };
+ 	sound-simple-card {
+ 		compatible = "simple-audio-card";
+ 		simple-audio-card,format = "i2s";
+diff --git a/drivers/net/wireless/rockchip_wlan/rtl8723bs/hal/hal_mp.c b/drivers/net/wireless/rockchip_wlan/rtl8723bs/hal/hal_mp.c
+index 3bfb1f2..001ec24 100755
+--- a/drivers/net/wireless/rockchip_wlan/rtl8723bs/hal/hal_mp.c
++++ b/drivers/net/wireless/rockchip_wlan/rtl8723bs/hal/hal_mp.c
+@@ -1073,7 +1073,8 @@ void mpt_SetRFPath_8723B(PADAPTER pAdapter)
+ 	}
+ 
+ 	switch (pAdapter->mppriv.antenna_tx) {
+-		u8 p = 0, i = 0;
++		//u8 p = 0, i = 0;
++		u8 p, i;
+ 	case ANTENNA_A: { /*/ Actually path S1  (Wi-Fi)*/
+ 		pMptCtx->mpt_rf_path = ODM_RF_PATH_A;
+ 		phy_set_bb_reg(pAdapter, rS0S1_PathSwitch, BIT9 | BIT8 | BIT7, 0x0);
