@@ -5,22 +5,22 @@
 #include <linux/cdev.h>
 #include <linux/device.h>
 #include <linux/err.h>
-#include <linux/fs.h>
-#include <linux/gpio.h> /* For Legacy integer based GPIO */
+#include <linux/fs.h>                       // ioctl and file_operations support 
+#include <linux/gpio.h>                     /* For Legacy integer based GPIO */
 #include <linux/init.h>
 // #include <linux/interrupt.h> /* For IRQ */
 #include <linux/kernel.h>
 #include <linux/major.h>
 #include <linux/module.h>
-#include <linux/of.h>      /* For DT*/
-#include <linux/of_gpio.h> /* For of_gpio* functions */
+#include <linux/of.h>                       /* For DT*/
+#include <linux/of_gpio.h>                  /* For of_gpio* functions */
 #include <linux/of_device.h>
 #include <linux/pinctrl/pinctrl.h>
 #include <linux/pinctrl/consumer.h>
 #include <linux/pinctrl/pinctrl-state.h>
 #include <linux/delay.h>
 #include <linux/gpio/consumer.h>
-#include <linux/platform_device.h> /* For platform devices */
+#include <linux/platform_device.h>          /* For platform devices */
 #include <linux/printk.h>
 #include <linux/slab.h>
 #include <linux/uaccess.h>

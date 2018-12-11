@@ -1,4 +1,5 @@
 /**
+ * @Description: contrl gpio status using pinctrl subsystem
  * 
  */
 
