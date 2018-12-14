@@ -1,11 +1,39 @@
 # gitignore
 # Untracked files:
+.*
+*.a
+*.i
+*.o
+*.o.*
+*.s
+*.db 
+*.gz
+*.ko
+*.ll
+*.so
+*.su
+*.xz
+*.bin
+*.bz2
+*.dwo
+*.elf
+*.lst
+*.lz4
+*.lzo
+*.mod.c
+*.tar
+*.gcno
+*.lzma
+*.order
+*.so.dbg
+*.patch
+*.symtypes
+modules.builtin
+Module.symvers
+# clion , vscode ignore
 .vscode
 .idea
 cmake-build-debug
-*.o
-*.so
-*.db 
 .*.s*p
 *.o.cmd
 *.mode.o.cmd
@@ -14,4 +42,3 @@ cmake-build-debug
 *.order
 *.symvers
 .*.ko.cmd
-
