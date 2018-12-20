@@ -41,7 +41,7 @@
 #define OLED_BLINK			_IOW(MAGIC_NO, BLINK, unsigned int)			// param is timer delay
 #define OLED_STATUS			_IOR(MAGIC_NO, STATUS, int)
 
-
+struct i2c_device oled_i2c;
 
 struct data_info {
         

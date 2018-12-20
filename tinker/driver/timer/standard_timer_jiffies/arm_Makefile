@@ -1,16 +1,12 @@
 # ------------------------------------------------------- #
-# Author :
-# Data :
-# Version
-# ------------------------------------------------------- #
 # get system verison
 KVERS = $(shell uname -r)
 
 # module install name
-MODULE_NAME = gpio_only_use_gpio_request
+MODULE_NAME = my_timer_jiffies
 
 # module test app name
-APP_NAME = app_gpio_pinctrl
+APP_NAME = app_my_timer_jiffies
 
 CROSS_COMPILE = arm-linux-gnueabihf-
 CC = $(CROSS_COMPILE)gcc
@@ -19,8 +15,8 @@ CC = $(CROSS_COMPILE)gcc
 obj-m += ${MODULE_NAME}.o
 
 # kernel dir
-# KERNEL_DIR = /arm/tinker/debian_kernel
-KERNEL_DIR = /home/quan/tinker/debian_kernel
+KERNEL_DIR = /arm/tinker/debian_kernel
+# KERNEL_DIR = /home/quan/tinker/debian_kernel
 # get driver floder path
 CUR_DIR = $(shell pwd)
 
