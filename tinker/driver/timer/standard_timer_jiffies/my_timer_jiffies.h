@@ -29,9 +29,9 @@
 static int timer_open(struct inode *inode, struct file *filp);
 static int timer_close(struct inode *inode, struct file *filp);
 static ssize_t timer_write(struct file *flip, const char __user *buff,
-                         size_t counter, loff_t *fops);
+                                size_t counter, loff_t *fops);
 static ssize_t timer_read (struct file *flip, char __user *buff, 
-                            size_t counter, loff_t *fops);
+                                size_t counter, loff_t *fops);
 long timer_ioctl (struct file *flip, unsigned int cmd, unsigned long param);
 
 int foo_device_create(void);
@@ -46,10 +46,10 @@ static struct   timer_list  foo_time;
 static struct   timeval     old_tmval;
 
 static struct file_operations foo_fops = {
-    .read = timer_read,
-    .write = timer_write,
-    .open = timer_open,
-    .release = timer_close,
+    .read           = timer_read,
+    .write          = timer_write,
+    .open           = timer_open,
+    .release        = timer_close,
     .unlocked_ioctl = timer_ioctl,
 };
 
@@ -60,7 +60,6 @@ static struct my_cdev {
     struct class    *foo_class;
     struct device   *foo_device;
 };
-
 struct my_cdev  * foo_dev_info;
 
 #endif

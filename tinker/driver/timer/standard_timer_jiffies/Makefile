@@ -16,20 +16,14 @@ all : kernel_modules
 kernel_modules:
 	make -C /lib/modules/$(KVERS)/build M=$(CURDIR) modules
 	@echo "---> build finished."
-clean:
+cleanall:
 	make -C /lib/modules/$(KVERS)/build M=$(CURDIR) clean
-	rm -rf .*.?.sw?p 
-	rm -rf .*.?.swp 
-	@echo "---> clean trash finished."
-clean_tansh:
-	@echo "---> clean swap file."
-	rm -rf .*.?.sw?p 
-	rm -rf .*.?.swp
+	rm -rvf .*.?.sw?p 
+	rm -rvf .*.?.swp 
+	@echo "---> all clean"
+clean:
 	@echo "---> clean trash file."
-	rm -rf *.o
-	rm -rf *.*.o
-	rm -rf .*.cmd
-	rm -rf .tmp_versions
+	rm -rvf .*.?.sw?p .*.?.swp *.o *.*.o .*.cmd .tmp_versions *.mod.c Module.symvers modules.order
 install:
 	@echo "---> install module $(temp)"
 	$(shell sudo insmod $(temp))

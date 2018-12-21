@@ -11,7 +11,7 @@ void foo_timer_callback(unsigned long arg)
     
     usr_msg("schedule time arrived, jiffies = %lu", jiffies);
     char * strs = (char *) arg;
-    usr_msg("got transfed args is : %s", strs);
+    usr_msg("got transferred args is : %s", strs);
     // get current time
     do_gettimeofday(&tm_val);
     // calculator interval_time
@@ -41,7 +41,7 @@ int foo_timer_init(void)
     init_timer(&foo_time);              // init kernel timer
     do_gettimeofday(&old_tmval);        // get current time
     foo_time.function = foo_timer_callback;             // set call back function
-    foo_time.data = (unsigned long) "transfer param";   // set call back function transfer parameter
+    foo_time.data = (unsigned long) "---> transfer param";   // set call back function transfer parameter
     foo_time.expires = jiffies + 1 * HZ;                // set counter timer to 1 sencod
     add_timer(&foo_time);               // add timer to kernel list
     mutex_unlock(&foo_mutex);           

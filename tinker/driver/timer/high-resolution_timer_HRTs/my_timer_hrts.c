@@ -1,4 +1,4 @@
-#include "my_timer_jiffies.h"
+#include "my_timer_hrts.h"
 #include <linux/time.h>	// for get system current time
 
 
@@ -39,13 +39,14 @@ int foo_timer_init(void)
     int retval = 0;
     mutex_lock(&foo_mutex);
     init_timer(&foo_time);              // init kernel timer
+#if 1
     do_gettimeofday(&old_tmval);        // get current time
     foo_time.function = foo_timer_callback;             // set call back function
     foo_time.data = (unsigned long) "transfer param";   // set call back function transfer parameter
     foo_time.expires = jiffies + 1 * HZ;                // set counter timer to 1 sencod
     add_timer(&foo_time);               // add timer to kernel list
     mutex_unlock(&foo_mutex);           
-   #if 0     
+#else   
     setup_timer(&my_timer, foo_timer_callback, 0);
     usr_msg( "Setup timer to fire in 500ms (%ld)", jiffies); 
     retval = mod_timer(&my_timer, jiffies + msecs_to_jiffies(500));
@@ -54,7 +55,7 @@ int foo_timer_init(void)
         err_msg("set mod_timer failed, current jiffies = %ld\n", jiffies);
         return -EINVAL;
     }
-    #endif
+#endif
     return retval;
 }
 
