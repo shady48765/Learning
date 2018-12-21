@@ -28,11 +28,11 @@ all : kernel_modules
 
 kernel_modules:
 	make -C $(KERNEL_DIR) M=$(CUR_DIR) modules ARCH=arm CROSS_COMPILE=arm-linux-gnueabihf-
-	$(CC) $(APP_NAME).c -o $(APP_NAME)
-	@echo "---> build finished."
+	@echo "---> kernel_modules build finished."
 
 app :
 	$(CC) $(APP_NAME).c -o $(APP_NAME)
+	@echo "---> app build finished."
 
 clean :
 	make -C $(KERNEL_DIR) M=$(CUR_DIR) clean

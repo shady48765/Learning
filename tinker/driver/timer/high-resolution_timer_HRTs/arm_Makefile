@@ -1,16 +1,12 @@
 # ------------------------------------------------------- #
-# Author :
-# Data :
-# Version
-# ------------------------------------------------------- #
 # get system verison
 KVERS = $(shell uname -r)
 
 # module install name
-MODULE_NAME = gpio_only_use_gpio_request
+MODULE_NAME = my_timer_hrts
 
 # module test app name
-APP_NAME = app_gpio_pinctrl
+APP_NAME = app_my_timer_hrts
 
 CROSS_COMPILE = arm-linux-gnueabihf-
 CC = $(CROSS_COMPILE)gcc
@@ -19,8 +15,8 @@ CC = $(CROSS_COMPILE)gcc
 obj-m += ${MODULE_NAME}.o
 
 # kernel dir
-# KERNEL_DIR = /arm/tinker/debian_kernel
-KERNEL_DIR = /home/quan/tinker/debian_kernel
+KERNEL_DIR = /arm/tinker/debian_kernel
+# KERNEL_DIR = /home/quan/tinker/debian_kernel
 # get driver floder path
 CUR_DIR = $(shell pwd)
 
@@ -34,26 +30,17 @@ app :
 	$(CC) $(APP_NAME).c -o $(APP_NAME)
 	@echo "---> app build finished."
 
-clean :
+cleanall :
 	make -C $(KERNEL_DIR) M=$(CUR_DIR) clean
-	rm -rf $(APP_NAME)
-	rm -rf .*.?.sw?p
-	rm -rf .*.?.swp
-	@echo "---> clean trash finished."
+	rm -rvf $(APP_NAME)
+	rm -rvf .*.?.sw?p
+	rm -rvf .*.?.swp
+	@echo "---> all clean"
 
-temp_clean:
-	@echo "---> clean swap file."
-	rm -rf .*.?.sw?p
-	rm -rf .*.?.swp
+clean:
 	@echo "---> clean trash file."
-	rm -rf *.o
-	rm -rf *.*.o
-	rm -rf .*.cmd
-	rm -rf .tmp_versions
-	rm -rf *.symvers
-	rm -rf *.order
-	rm -rf *.mod.c
-	@echo "---> temp files clean finished."
+	rm -rvf .*.?.sw?p .*.?.swp *.o *.*.o .*.cmd .tmp_versions *.mod.c Module.symvers modules.order
+	@echo "---> clean finished."
 
 install:
 	@echo "---> install module $(MODULE_NAME)"
