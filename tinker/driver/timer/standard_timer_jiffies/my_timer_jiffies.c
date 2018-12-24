@@ -3,7 +3,13 @@
 
 
 
-
+/**
+ * @Description:
+ *          timer counter recall function.
+ * @Attention: 
+ *          need to reload/init timer counter every tick cycle
+ * 
+ */
 void foo_timer_callback(unsigned long arg)
 {
     struct timeval tm_val;
@@ -33,7 +39,17 @@ void foo_timer_callback(unsigned long arg)
     add_timer(&foo_time);                    //recount
 }
 
-
+/**
+ * @Description:
+ *          init timer
+ *          set timer, init count
+ * ------------------------------------------------------------
+ *          j = jiffies;            // read the current value 
+ *          stamp_1 = j + HZ;       // 1 second in the future
+ *          stamp_half = j + HZ/2;  // half a second 
+ *          stamp_n = j + n * HZ    / 1000; // n milliseconds 
+ * 
+ */
 int foo_timer_init(void)
 {
     int retval = 0;

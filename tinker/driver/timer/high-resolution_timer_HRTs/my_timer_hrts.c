@@ -33,7 +33,6 @@ void foo_timer_callback(unsigned long arg)
     add_timer(&foo_time);                    //recount
 }
 
-
 int foo_timer_init(void)
 {
     int retval = 0;
