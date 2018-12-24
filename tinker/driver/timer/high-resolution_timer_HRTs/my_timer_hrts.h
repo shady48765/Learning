@@ -17,13 +17,14 @@
 #include <linux/raid/pq.h>
 #include <linux/mutex.h>
 
+
 #define TIMER_TAG                   " <TIMER> "
 #define USR_MSG_LEVEL               KERN_ERR
 #define USR_ERR_LEVEL               KERN_ERR
 #define usr_msg(fmt, args...)       printk(USR_MSG_LEVEL TIMER_TAG " (function : %s), [line : %d] "fmt"\n",__func__, __LINE__, ##args);
 #define err_msg(fmt, args...)       printk(USR_ERR_LEVEL TIMER_TAG " (function : %s), [line : %d] "fmt"\n",__func__, __LINE__, ##args);
 
-#define FOO_DEV_NAME                "my_timer"
+#define FOO_DEV_NAME                "my_hr_timer"
 
 /**--------------------- function define start ---------------------------*/
 static int timer_open(struct inode *inode, struct file *filp);
@@ -36,13 +37,41 @@ long timer_ioctl (struct file *flip, unsigned int cmd, unsigned long param);
 
 int foo_device_create(void);
 int foo_timer_init(void);
-void foo_timer_callback(unsigned long args);
+
+static enum hrtimer_restart foo_hrtimer_callback(struct hrtimer * arg);
 /**--------------------- function define end ---------------------------*/
 
+/**
+ * struct hrtimer - the basic hrtimer structure
+ * @node:	timerqueue node, which also manages node.expires,
+ *		the absolute expiry time in the hrtimers internal
+ *		representation. The time is related to the clock on
+ *		which the timer is based. Is setup by adding
+ *		slack to the _softexpires value. For non range timers
+ *		identical to _softexpires.
+ * @_softexpires: the absolute earliest expiry time of the hrtimer.
+ *		The time which was given as expiry time when the timer
+ *		was armed.
+ * @function:	timer expiry callback function
+ * @base:	pointer to the timer base (per cpu and per clock)
+ * @state:	state information (See bit values above)
+ ...
+ *
+ * The hrtimer structure must be initialized by hrtimer_init()
+ 
+ struct hrtimer {
+	struct timerqueue_node		node;
+	ktime_t				        _softexpires;
+	enum hrtimer_restart		(*function)(struct hrtimer *);
+	struct hrtimer_clock_base	*base;
+	unsigned long			    state;
+	...
+}
+ */
 
 struct mutex    foo_mutex;
 
-static struct   timer_list  foo_time;
+static struct   hrtimer     foo_timer;
 static struct   timeval     old_tmval;
 
 static struct file_operations foo_fops = {
