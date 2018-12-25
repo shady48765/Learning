@@ -5,7 +5,15 @@
 
 #include "./gpio_pinctrl.h"
 
+static int set_gpio_output(int pin, int level)
+{
+    return 0;
+}
 
+static int set_gpio_input(struct pinctrl *pin)
+{
+    return 0;
+}
 
 static int laser_open(struct inode *inode, struct file *filp)
 {

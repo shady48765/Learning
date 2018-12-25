@@ -28,20 +28,26 @@
 
 #include "./common.h"
 
-#define usr_msg(fmt, arg...)                                                                    \
-    do {                                                                                        \
-        printk(KERN_ERR "-------> [info] :(%s) [%d] " fmt "\n", __func__, __LINE__, ##arg);     \
-    } while (0)
+// #define usr_msg(fmt, arg...)                                                                    \
+//     do {                                                                                        \
+//         printk(KERN_ERR "-------> [info] :(%s) [%d] " fmt "\n", __func__, __LINE__, ##arg);     \
+//     } while (0)
 
-#define err_msg(fmt, arg...)                                                                    \
-    do {                                                                                        \
-        printk(KERN_ERR "-------> [error] :(%s) [%d] " fmt "\n", __func__, __LINE__, ##arg);    \
-    } while (0)
+// #define err_msg(fmt, arg...)                                                                    \
+//     do {                                                                                        \
+//         printk(KERN_ERR "-------> [error] :(%s) [%d] " fmt "\n", __func__, __LINE__, ##arg);    \
+//     } while (0)
 
-#define CHECK(type expr)           \
-        do {                  \
-            int ret = (expr); \
-            ASSERT(0 == ret); \
+#define TAG                         " <PINCTL> "
+#define USR_MSG_LEVEL               KERN_ERR
+#define USR_ERR_LEVEL               KERN_ERR
+#define usr_msg(fmt, args...)       printk(USR_MSG_LEVEL TAG " (function : %s), [line : %d] "fmt"\n",__func__, __LINE__, ##args);
+#define err_msg(fmt, args...)       printk(USR_ERR_LEVEL TAG " (function : %s), [line : %d] "fmt"\n",__func__, __LINE__, ##args);
+
+#define CHECK(type expr)            \
+        do {                        \
+            int ret = (expr);       \
+            ASSERT(0 == ret);       \
         }while(0)
         
 #define DRIVER_NAME         "laser_driver"
@@ -86,6 +92,6 @@ static ssize_t dev_write(struct file *flip, const char __user *buff,
 static long laser_ioctl(struct file *flip, unsigned int cmd,
                     unsigned long param);
 static int get_dts_info(struct device * dev);
+static int set_gpio_output(int pin, int level);
+static int set_gpio_input(struct pinctrl *pin);
 
-
-#endif
