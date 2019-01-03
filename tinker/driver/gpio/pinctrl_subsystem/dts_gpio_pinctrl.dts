@@ -1,8 +1,22 @@
 // file : rk3288-miniarm.dts
+<<<<<<< Updated upstream
 
 laser {
 	compatible = "laser-pinctrl";
 	label = "laser-pinctrl";
+=======
+// .//dt-bindings/pinctrl/rockchip.h:49:#define RK_PC3		19
+	laser_led {
+		compatible = "laser_led";
+		laser = <&gpio5, RK_PC3, GPIO_ACTIVE_LOW>;
+		label = "laser_pin";
+		pinctrl-name = "default", "laser_output", "laser_input";
+		pinctrl-0 = <&default>;
+		
+		status = "okay";
+	};
+&pinctrl {
+>>>>>>> Stashed changes
 
 	pinctrl-name = "default";
 	pinctrl-0 = <&laser_pin>;
