@@ -3,7 +3,20 @@
  * 
  */
 
-#include "./gpio_pinctrl.h"
+#include "gpio_pinctrl.h"
+static int set_pin(struct pinctrl *pin, gpio_status_enum state)
+{
+    if(on == state) {
+        
+    } else {
+            
+    }
+}
+
+static int read_pin(struct pinctrl *pin)
+{
+
+}
 
 static int set_gpio_output(int pin, int level)
 {
@@ -372,3 +385,126 @@ MODULE_AUTHOR("QUAN");
 MODULE_LICENSE("GPL");
 MODULE_ALIAS("laser driver");
 MODULE_DESCRIPTION("gpio platform driver");
+
+
+
+
+#if 0
+
+struct pinctrl *pinctrl1;
+struct pinctrl_state *pins_default;
+struct pinctrl_state *eint_as_int, *eint_output0, *eint_output1, *rst_output0, *rst_output1;
+
+
+
+
+
+void tpd_get_dts_info(void)
+{
+	struct device_node *node1 = NULL;
+// modified by elink_phil start <<<
+#if 0
+	int key_dim_local[16], i;
+#endif
+	// 查找匹配的 节点 node node1 = NULL 表示从根节点开始找
+	node1 = of_find_matching_node(node1, touch_of_match);
+	if (node1) {
+		of_property_read_u32(node1, "tpd-filter-enable", &tpd_dts_data.touch_filter.enable);
+		if (tpd_dts_data.touch_filter.enable) {
+			of_property_read_u32(node1, "tpd-filter-pixel-density",
+			                     &tpd_dts_data.touch_filter.pixel_density);
+			of_property_read_u32_array(node1, "tpd-filter-custom-prameters",
+			                           (u32 *)tpd_dts_data.touch_filter.W_W, ARRAY_SIZE(tpd_dts_data.touch_filter.W_W));
+			of_property_read_u32_array(node1, "tpd-filter-custom-speed",
+			                           tpd_dts_data.touch_filter.VECLOCITY_THRESHOLD,
+			                           ARRAY_SIZE(tpd_dts_data.touch_filter.VECLOCITY_THRESHOLD));
+		}
+		memcpy(&tpd_filter, &tpd_dts_data.touch_filter, sizeof(tpd_filter));
+		pr_debug("[tpd]tpd-filter-enable = %d, pixel_density = %d\n",
+		         tpd_filter.enable, tpd_filter.pixel_density);
+	} else {
+		pr_err("[tpd]%s can't find touch compatible custom node\n", __func__);
+	}
+}
+EXPORT_SYMBOL(tpd_get_dts_info);
+
+static DEFINE_MUTEX(tpd_set_gpio_mutex);
+void tpd_gpio_as_int(int pin)
+{
+	mutex_lock(&tpd_set_gpio_mutex);
+	TPD_DEBUG("[tpd]tpd_gpio_as_int\n");
+	if (pin == 1)
+		pinctrl_select_state(pinctrl1, eint_as_int);
+	mutex_unlock(&tpd_set_gpio_mutex);
+}
+EXPORT_SYMBOL(tpd_gpio_as_int);
+
+void tpd_gpio_output(int pin, int level)
+{
+	mutex_lock(&tpd_set_gpio_mutex);
+	TPD_DEBUG("[tpd]tpd_gpio_output pin = %d, level = %d\n", pin, level);
+	if (pin == 1) {
+		if (level)
+			pinctrl_select_state(pinctrl1, eint_output1);
+		else
+			pinctrl_select_state(pinctrl1, eint_output0);
+	} else {
+		if (level)
+			pinctrl_select_state(pinctrl1, rst_output1);
+		else
+			pinctrl_select_state(pinctrl1, rst_output0);
+	}
+	mutex_unlock(&tpd_set_gpio_mutex);
+}
+EXPORT_SYMBOL(tpd_gpio_output);
+
+int tpd_get_gpio_info(struct platform_device *pdev)
+{
+	int ret;
+
+	TPD_DEBUG("[tpd %d] mt_tpd_pinctrl+++++++++++++++++\n", pdev->id);
+	pinctrl1 = devm_pinctrl_get(&pdev->dev);
+	if (IS_ERR(pinctrl1)) {
+		ret = PTR_ERR(pinctrl1);
+		dev_err(&pdev->dev, "fwq Cannot find touch pinctrl1!\n");
+		return ret;
+	}
+	pins_default = pinctrl_lookup_state(pinctrl1, "default");
+	if (IS_ERR(pins_default)) {
+		ret = PTR_ERR(pins_default);
+		/* dev_err(&pdev->dev, "fwq Cannot find touch pinctrl default %d!\n", ret);*/
+	}
+	eint_as_int = pinctrl_lookup_state(pinctrl1, "state_eint_as_int");
+	if (IS_ERR(eint_as_int)) {
+		ret = PTR_ERR(eint_as_int);
+		dev_err(&pdev->dev, "fwq Cannot find touch pinctrl state_eint_as_int!\n");
+		return ret;
+	}
+	eint_output0 = pinctrl_lookup_state(pinctrl1, "state_eint_output0");
+	if (IS_ERR(eint_output0)) {
+		ret = PTR_ERR(eint_output0);
+		dev_err(&pdev->dev, "fwq Cannot find touch pinctrl state_eint_output0!\n");
+		return ret;
+	}
+	eint_output1 = pinctrl_lookup_state(pinctrl1, "state_eint_output1");
+	if (IS_ERR(eint_output1)) {
+		ret = PTR_ERR(eint_output1);
+		dev_err(&pdev->dev, "fwq Cannot find touch pinctrl state_eint_output1!\n");
+		return ret;
+	}
+	rst_output0 = pinctrl_lookup_state(pinctrl1, "state_rst_output0");
+	if (IS_ERR(rst_output0)) {
+		ret = PTR_ERR(rst_output0);
+		dev_err(&pdev->dev, "fwq Cannot find touch pinctrl state_rst_output0!\n");
+		return ret;
+	}
+	rst_output1 = pinctrl_lookup_state(pinctrl1, "state_rst_output1");
+	if (IS_ERR(rst_output1)) {
+		ret = PTR_ERR(rst_output1);
+		dev_err(&pdev->dev, "fwq Cannot find touch pinctrl state_rst_output1!\n");
+		return ret;
+	}
+	TPD_DEBUG("[tpd%d] mt_tpd_pinctrl----------\n", pdev->id);
+	return 0;
+}
+#endif
