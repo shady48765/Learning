@@ -3,7 +3,7 @@
 KVERS = $(shell uname -r)
 
 # module install name
-MODULE_NAME = work_queue
+MODULE_NAME = foo_workqueue
 
 # module test app name
 APP_NAME = app_${MODULE_NAME}

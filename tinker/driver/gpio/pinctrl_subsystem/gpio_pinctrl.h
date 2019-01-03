@@ -28,21 +28,12 @@
 
 #include "./common.h"
 
-// #define usr_msg(fmt, arg...)                                                                    \
-//     do {                                                                                        \
-//         printk(KERN_ERR "-------> [info] :(%s) [%d] " fmt "\n", __func__, __LINE__, ##arg);     \
-//     } while (0)
-
-// #define err_msg(fmt, arg...)                                                                    \
-//     do {                                                                                        \
-//         printk(KERN_ERR "-------> [error] :(%s) [%d] " fmt "\n", __func__, __LINE__, ##arg);    \
-//     } while (0)
 
 #define TAG                         " <PINCTL> "
 #define USR_MSG_LEVEL               KERN_ERR
 #define USR_ERR_LEVEL               KERN_ERR
-#define usr_msg(fmt, args...)       printk(USR_MSG_LEVEL TAG " (function : %s), [line : %d] "fmt"\n",__func__, __LINE__, ##args);
-#define err_msg(fmt, args...)       printk(USR_ERR_LEVEL TAG " (function : %s), [line : %d] "fmt"\n",__func__, __LINE__, ##args);
+#define usr_msg(fmt, args...)       printk(USR_MSG_LEVEL TAG fmt "(function : %s), [line : %d] \n",__func__, __LINE__, ##args)
+#define err_msg(fmt, args...)       printk(USR_ERR_LEVEL TAG fmt "(function : %s), [line : %d] \n",__func__, __LINE__, ##args)
 
 #define CHECK(type expr)            \
         do {                        \
@@ -54,6 +45,10 @@
 #define LASER_NAME          "laser"
 #define LASER_CLS_NAME      "laser_class"
 #define NODE_FROM           NULL
+
+#define MAGIC   "G"
+
+
 
 
 typedef enum {
@@ -84,13 +79,15 @@ static struct device_info *dev_info;
 
 
 // struct device_node	* laser_node;
+static int set_pin(struct pinctrl *pin, gpio_status_enum state);
+static int read_pin(struct pinctrl *pin);
+
 static int get_dts_info(const char *compat);
 static int dev_open(struct inode *inode, struct file *filp);
 static int dev_release(struct inode *inode, struct file *filp);
 static ssize_t dev_write(struct file *flip, const char __user *buff,
                     size_t counter, loff_t *fops);
-static long laser_ioctl(struct file *flip, unsigned int cmd,
-                    unsigned long param);
+static long laser_ioctl(struct file *flip, unsigned int cmd, unsigned long param);
 static int get_dts_info(struct device * dev);
 static int set_gpio_output(int pin, int level);
 static int set_gpio_input(struct pinctrl *pin);

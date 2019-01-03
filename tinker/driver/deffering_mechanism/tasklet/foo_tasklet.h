@@ -16,13 +16,13 @@
 #include <linux/timer.h>        //for timer_list, jiffy timer, standard timer
 #include <linux/raid/pq.h>
 #include <linux/mutex.h>
-#include <liux/delay.h>
+#include <linux/delay.h>
 
 #define TIMER_TAG                   " <TASKLET> "
 #define USR_MSG_LEVEL               KERN_ERR
 #define USR_ERR_LEVEL               KERN_ERR
-#define usr_msg(fmt, args...)       printk(USR_MSG_LEVEL TIMER_TAG " (function : %s), [line : %d] "fmt"\n",__func__, __LINE__, ##args);
-#define err_msg(fmt, args...)       printk(USR_ERR_LEVEL TIMER_TAG " (function : %s), [line : %d] "fmt"\n",__func__, __LINE__, ##args);
+#define usr_msg(fmt, args...)       printk(USR_MSG_LEVEL TIMER_TAG " (function : %s), [line : %d] "fmt"\n",__func__, __LINE__, ##args)
+#define err_msg(fmt, args...)       printk(USR_ERR_LEVEL TIMER_TAG " (function : %s), [line : %d] "fmt"\n",__func__, __LINE__, ##args)
 
 
 

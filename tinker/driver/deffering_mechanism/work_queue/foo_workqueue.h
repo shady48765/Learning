@@ -1,5 +1,5 @@
-#ifndef __FOO_PROC_H
-#define __FOO_PROC_H
+#ifndef __FOO_WORKQUEUE_H
+#define __FOO_WORKQUEUE_H
 
 #include <linux/jiffies.h>
 #include <linux/module.h>
@@ -18,13 +18,13 @@
 #include <linux/mutex.h>
 #include <linux/delay.h>
 
-#define TIMER_TAG                   " <PROC> "
+#define TIMER_TAG                   " <WORKQUEUE> "
 #define USR_MSG_LEVEL               KERN_ERR
 #define USR_ERR_LEVEL               KERN_ERR
-#define usr_msg(fmt, args...)       printk(USR_MSG_LEVEL TIMER_TAG " (function : %s), [line : %d] "fmt"\n",__func__, __LINE__, ##args);
-#define err_msg(fmt, args...)       printk(USR_ERR_LEVEL TIMER_TAG " (function : %s), [line : %d] "fmt"\n",__func__, __LINE__, ##args);
+#define usr_msg(fmt, args...)       printk(USR_MSG_LEVEL TIMER_TAG " (function : %s), [line : %d] "fmt"\n",__func__, __LINE__, ##args)
+#define err_msg(fmt, args...)       printk(USR_ERR_LEVEL TIMER_TAG " (function : %s), [line : %d] "fmt"\n",__func__, __LINE__, ##args)
 
-#define FOO_DEV_NAME                "my_timer"
+
 
 /**--------------------- function define start ---------------------------*/
 static int timer_open(struct inode *inode, struct file *filp);
@@ -42,7 +42,7 @@ int foo_proc_create(void);
 
 /**--------------------- function define end ---------------------------*/
 
-
+#define FOO_DEV_NAME                "foo_device"
 struct mutex    foo_mutex;
 
 static struct   timer_list  foo_time;

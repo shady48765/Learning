@@ -1,16 +1,65 @@
-
-#define FOO_TASKLET                     1
-#define FOO_STANDARD_TIMER              0
-#define FOO_PROC_FILE                   0
-
-#include "foo_tasklet.h"
+#include "foo_workqueue.h"
 #include <linux/time.h>	// for get system current time
+#if FOO_PROC_FILE
 #include <linux/proc_fs.h>
+#endif// end #FOO_PROC_FILE
 #if FOO_TASKLET
     #include <linux/interrupt.h>
 #endif // end #FOO_TASKLET
+#if FOO_WORKQUEUE
+    #include <linux/workqueue.h>
+#endif
 
 
+#define FOO_WORKQUEUE                   1
+#define FOO_TASKLET                     0
+#define FOO_STANDARD_TIMER              0
+#define FOO_PROC_FILE                   0
+/*-------------- workqueue start -------------------------------------------*/
+
+#if FOO_WORKQUEUE
+// #define DECLARE_WORK(n, f)						        \
+//          struct work_struct n = __WORK_INITIALIZER(n, f)
+
+static struct work_struct           foo_work;
+static struct workqueue_struct      foo_workqueue;
+
+static void foo_workqueue_recall(struct work_struct *work)
+{
+    static int counter = 0;
+    static int repeate_workqueue_recall = 1;
+    
+    usr_msg("counter = %d", counter);
+    counter++;
+
+    if(1 == repeate_workqueue_recall && counter < 10) {
+        msleep(1000);
+        schedule_work(&foo_work);
+    } else {
+        
+        schedule();
+        // will not approach here
+        usr_msg("workqueue scheduled");
+    }
+}
+
+int foo_workqueue_init(void)
+{
+    INIT_WORK(&foo_work, foo_workqueue_recall);
+    schedule_work(&foo_work);   // or queue_work(system_wq, work);
+    usr_msg("workqueue init success");
+}
+
+void foo_workqueue_remove(void)
+{
+    cancel_work_sync(&foo_work);
+    destroy_work_on_stack(&foo_work);
+    usr_msg("workqueue removed");
+}
+
+#endif // end #if FOO_TASKLET
+
+/*-------------- workqueue end -------------------------------------------*/
 /*-------------- tasklet start -------------------------------------------*/
 // reschedule tasklet in tasklet recall function, system will be slowed down
 #if FOO_TASKLET
@@ -243,6 +292,10 @@ static int __init foo_device_init(void)
 #if FOO_TASKLET
     foo_tasklet_init();
 #endif  // end #if FOO_TASKLET
+
+#if FOO_WORKQUEUE
+    foo_workqueue_init();
+#endif
     return ret;
 
 err_foo_device_create:
@@ -272,6 +325,11 @@ static void __exit foo_device_exit(void)
 #if FOO_TASKLET
     foo_tasklet_exit();
 #endif  // end #if FOO_TASKLET
+
+#if FOO_WORKQUEUE
+    foo_workqueue_remove();
+    usr_msg("foo_workqueue_removed success");
+#endif
     usr_msg("foo_device module uninstall success");
 }
 

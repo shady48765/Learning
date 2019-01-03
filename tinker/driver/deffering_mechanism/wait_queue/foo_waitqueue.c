@@ -1,6 +1,5 @@
 #include "foo_waitqueue.h"
 #include <linux/time.h>	// for get system current time
-#include <linux/proc_fs.h>
 #include <linux/workqueue.h>
 #include <linux/wait.h>
 
@@ -13,23 +12,28 @@
 #if FOO_WAIT_QUEUE
 
 static DECLARE_WAIT_QUEUE_HEAD(foo_queue_head);
-// static struct wait_queue_head_t     foo_queue_head;
+// static struct wait_queue_head_t     foo_queue_head;     // not recommended definition
 static struct work_struct           foo_queue_work;
 static int condition = 1;
 
 static void foo_queue_recall_function(struct work_struct *work)
 {
-    if(condition < 10) {
+    static int foo_waitqueue_repeat_schedule = 1;
+    
     usr_msg("get in waitqueue recall fuction, current condition = %d", condition);
     condition += 1;
     wake_up_interruptible(&foo_queue_head);
     usr_msg("queue has been woke-up, current condition = %d", condition);
 
-    // if need recall wait queue in this file
-    msleep(1000);
-    // readd waitqueue to system schedule
-    schedule_work(&foo_queue_work);
-    // if condition true kill queue
+    // reschedule 10 times
+    if(1 == foo_waitqueue_repeat_schedule && counter < 10) {
+        msleep(1000);
+        schedule_work(&foo_queue_work);
+    }
+   else {
+       // normally program will not reached here
+       // after 10 times schedule_work, program will be suspend
+       usr_msg("skip wake_up_interruptible, condition = %d", condition);
    }
 }
 
