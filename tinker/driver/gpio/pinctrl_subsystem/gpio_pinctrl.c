@@ -5,7 +5,15 @@
 
 #include "./gpio_pinctrl.h"
 
+static int set_gpio_output(int pin, int level)
+{
+    return 0;
+}
 
+static int set_gpio_input(struct pinctrl *pin)
+{
+    return 0;
+}
 
 static int laser_open(struct inode *inode, struct file *filp)
 {
@@ -70,17 +78,17 @@ static long laser_ioctl(struct file *flip, unsigned int cmd,
     int delay_timer, ret, temp, gpio_status;
 
 
-        switch(cmd)
+    switch(cmd)
     {
-        case GPIO_TEST :
+        case LED_TEST :
             printk("in key_drv_ioctl : test case\n");
             break;
 
-        case GPIO_SET:
+        case LED_SET:
             break;
-        case GPIO_RESET:
+        case LED_RESET:
             break;
-        case GPIO_BLINK:
+        case LED_BLINK:
             temp = (int)param;
             ret = copy_from_user(&delay_timer, param, sizeof(int));
             if (ret != 0) {
@@ -89,7 +97,7 @@ static long laser_ioctl(struct file *flip, unsigned int cmd,
             }
             /*TODO : delay function*/
             break;
-        case GPIO_STATUS:
+        case LED_BLINK:
             gpio_status = -1;
             /*TODO : read gpio status*/
             ret = copy_to_user(flip, gpio_status, sizeof(int));

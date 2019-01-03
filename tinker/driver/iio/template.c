@@ -1,47 +1,50 @@
-/**
- * @Decription: High time timer
- * @Declaration: deceted aliyun server HZ = 250
- *              1. jiffies increase 250 per second
- *              2. high resolution timer can refer the pmic.c file
-*/
+#include "foo_proc.h"
+#include <linux/time.h>	// for get system current time
+
+/*-------------- proc file create start ------------------*/
 
 
-#include "my_timer_hrts.h"
-#include <linux/time.h>	            // for get system current time
-// for hr-timer
-#include <linux/hrtimer.h>
-#include <linux/sched.h>
-#include <linux/ktime.h>
-
-#define MS_TO_NS(x) (x * 1E6L)      // ms to ns
-
-static ktime_t  tm_period;
 
 
-static enum hrtimer_restart foo_hrtimer_callback(struct hrtimer * arg)
+/*-------------- proc file create end ------------------*/
+void foo_timer_callback(unsigned long arg)
 {
     struct timeval tm_val;
     static int loop_counter = 0;
-
-    ktime_t now = arg->base->get_time();
-    usr_msg("timer running at jiffies=%ld\n", jiffies);
-
-    hrtimer_forward(arg, now, tm_period);
-    return HRTIMER_RESTART;
+    
+    // get current time and compare with before
+    usr_msg("schedule time arrived, jiffies = %lu", jiffies);
+    char * strs = (char *) arg;
+    usr_msg("got transferred args is : %s", strs);
+    // get current time
+    do_gettimeofday(&tm_val);
+    // calculator interval_time
+    usr_msg("interval time is %ld sencond", tm_val.tv_sec - old_tmval.tv_sec);
+    usr_msg("interval time is %ld usencond", tm_val.tv_usec - old_tmval.tv_usec);
+    // get current time and compare with before end
+    old_tmval = tm_val;         // reload old time value
+    
+    //test timer counter set from 1s to 10 second
+    usr_msg("loop %d, set timer counter to %d", loop_counter, loop_counter);
+    foo_time.expires = jiffies + loop_counter * HZ;             // reset counter to loop_counter sencod
+    if(30 == loop_counter)
+        loop_counter = 1;
+    loop_counter++;
+    add_timer(&foo_time);                    //recount
 }
+
 
 int foo_timer_init(void)
 {
     int retval = 0;
-    
     mutex_lock(&foo_mutex);
-    // ktime_set(const s64 secs, const unsigned long nsecs); // param1: second, param2:nanosecond
-    tm_period = ktime_set(0, MS_TO_NS(500));     // set 1second, 1000 nanosecond.
-    hrtimer_init(&foo_timer, CLOCK_REALTIME, HRTIMER_MODE_REL);
-    foo_timer.function = foo_hrtimer_callback;
-    hrtimer_start(&foo_timer, tm_period, HRTIMER_MODE_REL);
-    mutex_unlock(&foo_mutex);  
-    
+    init_timer(&foo_time);                                      // init kernel timer
+    do_gettimeofday(&old_tmval);                                // get current time
+    foo_time.function = foo_timer_callback;                     // set call back function
+    foo_time.data = (unsigned long) "---> transfer param";      // set call back function transfer parameter
+    foo_time.expires = jiffies + 1 * HZ;                        // set counter timer to 1 sencod
+    add_timer(&foo_time);                                       // add timer to kernel list
+    mutex_unlock(&foo_mutex);           
 
     return retval;
 }
@@ -175,7 +178,7 @@ static void __exit timer_jiffy_exit(void)
     unregister_chrdev_region(foo_dev_info->foo_dev_number, 1);
     kfree(foo_dev_info);
 
-    retval = hrtimer_cancel(&foo_timer);
+    retval = del_timer(&foo_time);
     if (retval)
         err_msg("The timer is still in use...\n");
     usr_msg("Timer module unloaded\n");

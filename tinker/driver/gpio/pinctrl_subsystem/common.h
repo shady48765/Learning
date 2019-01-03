@@ -42,11 +42,11 @@
 #define STATUS				0x64
 #define TEST				0x65
 
-#define GPIO_TEST 			_IO(MAGIC_NO, TEST)
-#define GPIO_SET 			_IOW(MAGIC_NO, SET, unsigned int)
-#define GPIO_RESET			_IOW(MAGIC_NO, RESET, unsigned int)
-#define GPIO_BLINK			_IOW(MAGIC_NO, BLINK, unsigned int)			// param is timer delay
-#define GPIO_STATUS			_IOR(MAGIC_NO, STATUS, int)
+#define LED_TEST 			_IO(MAGIC_NO, TEST)
+#define LED_SET 			_IOW(MAGIC_NO, SET, unsigned int)
+#define LED_RESET			_IOW(MAGIC_NO, RESET, unsigned int)
+#define LED_BLINK			_IOW(MAGIC_NO, BLINK, unsigned int)			// param is timer delay
+#define LED_STATUS			_IOR(MAGIC_NO, STATUS, int)
 
 
 #endif
