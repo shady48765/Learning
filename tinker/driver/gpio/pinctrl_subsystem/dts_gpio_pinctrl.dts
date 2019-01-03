@@ -1,22 +1,20 @@
 // file : rk3288-miniarm.dts
 
-	laser_led {
-		compatible = "laser_led";
-		laser = <&gpio5, RK_PC3, GPIO_ACTIVE_LOW>;
-		label = "laser_pin";
-		pinctrl-name = "default", "laser_output", "laser_input";
-		pinctrl-0 = <&default>;
-		
-		status = "okay";
-	};
+laser {
+	compatible = "laser-pinctrl";
+	label = "laser-pinctrl";
+
+	pinctrl-name = "default";
+	pinctrl-0 = <&laser_pin>;
+	status = "okay";
+};
 &pinctrl {
 
-        laser_blink: laser-blink {
-
-                laser-on = <RK_GPIO5 RK_PC3 GPIO_ACTIVE_HIGH, &pcfg_pull_down>;
-                laser-off = <RK_GPIO5 RK_PC3 GPIO_ACTIVE_LOW, &pcfg_pull_down>;
-                output-high;
-        }
+	laser {
+		laser_pin: laser_pin {
+			rockchip,pins = <RK_GPIO5 RK_PC3 RK_FUNC_GPIO, &pcfg_pull_up>;
+		};
+	};
 
         ......
     }
