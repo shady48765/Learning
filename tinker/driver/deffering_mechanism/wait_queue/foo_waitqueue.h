@@ -16,14 +16,14 @@
 #include <linux/timer.h>        //for timer_list, jiffy timer, standard timer
 #include <linux/raid/pq.h>
 #include <linux/mutex.h>
+#include <linux/delay.h>
 
-#define TIMER_TAG                   " <PROC> "
+#define TIMER_TAG                   " <WAIT_QUEUE> "
 #define USR_MSG_LEVEL               KERN_ERR
 #define USR_ERR_LEVEL               KERN_ERR
 #define usr_msg(fmt, args...)       printk(USR_MSG_LEVEL TIMER_TAG " (function : %s), [line : %d] "fmt"\n",__func__, __LINE__, ##args);
 #define err_msg(fmt, args...)       printk(USR_ERR_LEVEL TIMER_TAG " (function : %s), [line : %d] "fmt"\n",__func__, __LINE__, ##args);
 
-#define FOO_DEV_NAME                "my_timer"
 
 /**--------------------- function define start ---------------------------*/
 static int timer_open(struct inode *inode, struct file *filp);
@@ -37,10 +37,11 @@ long timer_ioctl (struct file *flip, unsigned int cmd, unsigned long param);
 int foo_device_create(void);
 int foo_timer_init(void);
 void foo_timer_callback(unsigned long args);
-int foo_proc_create(void);
+
 
 /**--------------------- function define end ---------------------------*/
 
+#define FOO_DEV_NAME        "foo_device"
 
 struct mutex    foo_mutex;
 

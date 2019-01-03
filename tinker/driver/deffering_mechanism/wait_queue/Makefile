@@ -5,7 +5,7 @@ CURDIR := $(shell pwd)
 
 
 # module install name
-MODULE_NAME = wait_queue
+MODULE_NAME = foo_waitqueue
 # Kernel modules
 obj-m += ${MODULE_NAME}.o
 # Specify flags for the module compilation.

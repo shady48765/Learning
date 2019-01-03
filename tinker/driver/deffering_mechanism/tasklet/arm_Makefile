@@ -3,7 +3,7 @@
 KVERS = $(shell uname -r)
 
 # module install name
-MODULE_NAME = task_list
+MODULE_NAME = foo_tasklet
 
 # module test app name
 APP_NAME = app_${MODULE_NAME}

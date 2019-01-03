@@ -3,7 +3,7 @@
 #include <linux/proc_fs.h>
 #include <linux/workqueue.h>
 
-/*-------------- workqueue create start ------------------*/
+/*-------------- workqueue create start -----------------------------*/
 // ./linux/workqueue.h:415:#define create_workqueue(name)	
 
 #define FOO_DYNAMICALLY_WORKQUEUE       1
@@ -51,7 +51,7 @@ void foo_workqueue_create(void)
 }
 #endif
 
-/*-------------- workqueue create end --------------------*/
+/*-------------- workqueue create end ----------------------------*/
 
 /*-------------- proc file create start ------------------*/
 #define FOO_PROC_NAME               "foo_proc"

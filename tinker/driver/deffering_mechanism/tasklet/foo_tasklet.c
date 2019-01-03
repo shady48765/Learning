@@ -1,11 +1,33 @@
-#include "foo_proc.h"
+
+#define FOO_TASKLET                     1
+#define FOO_STANDARD_TIMER              0
+#define FOO_PROC_FILE                   0
+
+#include "foo_tasklet.h"
 #include <linux/time.h>	// for get system current time
 #include <linux/proc_fs.h>
+#if FOO_TASKLET
+    #include <linux/interrupt.h>
+#endif // end #FOO_TASKLET
 
+
+
+#if FOO_TASKLET
+// #define DECLARE_TASKLET(name, func, data) \
+//          struct tasklet_struct name = { NULL, 0, ATOMIC_INIT(0), func, data }
+
+DECLARE_TASKLET()
+
+void foo_tasklet_init(void)
+{
+    
+}
+
+
+#endif // end #if FOO_TASKLET
 /*-------------- proc file create start ------------------*/
-
-
-#define FOO_PROC_NAME               "foo_proc"
+#if FOO_PROC_FILE
+#define FOO_PROC_NAME   "foo_proc"
 
 struct proc_dir_entry   *foo_proc_dir;
 
@@ -17,10 +39,12 @@ int foo_proc_create(void)
     }
     return 0;
 }
-
+#endif  // end #if FOO_PROC_FILE
 
 
 /*-------------- proc file create end ------------------*/
+/*-------------- standard timer start ------------------------------------*/
+#if FOO_STANDARD_TIMER
 void foo_timer_callback(unsigned long arg)
 {
     struct timeval tm_val;
@@ -47,7 +71,6 @@ void foo_timer_callback(unsigned long arg)
     add_timer(&foo_time);                    //recount
 }
 
-
 int foo_timer_init(void)
 {
     int retval = 0;
@@ -62,7 +85,8 @@ int foo_timer_init(void)
 
     return retval;
 }
-
+#endif // end #if FOO_STANDARD_TIMER
+/*-------------- standard timer end ------------------------------------*/
 static int timer_open(struct inode *inode, struct file *filp)
 {
     usr_msg( "open"); 
@@ -94,21 +118,9 @@ long timer_ioctl (struct file *flip, unsigned int cmd, unsigned long param)
     return 0;
 }
 
-
-static int __init timer_jiffy_init(void)
+int foo_chrdev_register(void)
 {
     int ret;
-    mutex_init(&foo_mutex);
-    usr_msg("timer_jiffy start");
-    
-    foo_dev_info = kmalloc(sizeof(struct my_cdev), GFP_KERNEL);
-    if(!foo_dev_info) {
-        err_msg("kzmalloc error");
-        ret = -ENOMEM;
-        return ret;
-    }
-    memset(foo_dev_info, 0, sizeof(struct my_cdev));
-    
     ret = alloc_chrdev_region(&foo_dev_info->foo_dev_number, 0, 1, FOO_DEV_NAME);
     if(ret < 0) {
         err_msg("alloc_chrdev_region error");
@@ -129,35 +141,11 @@ static int __init timer_jiffy_init(void)
         ret = -ENOMEM;
         goto err_cdev_add;
     }
-    ret = foo_device_create();
-    if(ret < 0)
-        goto err_foo_device_create;
-    
-    usr_msg("timer_jiffy create success");
-    
-    
-    
-    // timer, if only init, can only run once foo_timer_callback
-    // every timer run foo_timer_callback, timer need to bu update!
-    ret = foo_timer_init();
-    if(0 != ret) {
-        err_msg("timer init failed");
-    }
-    usr_msg("timer init succeed, current jiffies = %ld", jiffies);
-
-
-    // proc file create
-    foo_proc_create();
-    usr_msg("proc file created");
     
     return ret;
-
-err_foo_device_create:
-    cdev_del(&foo_dev_info->foo_cdev);
 err_cdev_add:
     unregister_chrdev_region(foo_dev_info->foo_dev_number, 1);
 err_alloc_chrdev:
-    kfree(foo_dev_info);
     return ret;
 }
 
@@ -176,36 +164,88 @@ int foo_device_create(void)
         ret = PTR_ERR(foo_dev_info->foo_device);
         goto err_device_create;
     }
-    usr_msg("timer_jiffy device create success");
+    usr_msg("foo_device create success");
     return 0;
     
 err_device_create:
     class_destroy(foo_dev_info->foo_class);
 err_class_create:
     return ret;
-
-    
 }
 
-static void __exit timer_jiffy_exit(void)
+static int __init foo_device_init(void)
+{
+    int ret;
+    mutex_init(&foo_mutex);
+    usr_msg("foo_device create start");
+    
+    foo_dev_info = kmalloc(sizeof(struct my_cdev), GFP_KERNEL);
+    if(!foo_dev_info) {
+        err_msg("kzmalloc error");
+        ret = -ENOMEM;
+        return ret;
+    }
+    memset(foo_dev_info, 0, sizeof(struct my_cdev));
+    
+    ret = foo_chrdev_register();
+    if(ret < 0)
+        goto err_chrdev_register;
+    ret = foo_device_create();
+    if(ret < 0)
+        goto err_foo_device_create;
+    usr_msg("foo_device create success");
+    
+    
+#if FOO_STANDARD_TIMER
+    // timer, if only init, can only run once foo_timer_callback
+    // every timer run foo_timer_callback, timer need to bu update!
+    ret = foo_timer_init();
+    if(0 != ret) {
+        err_msg("timer init failed");
+    }
+    usr_msg("timer init succeed, HZ = %d, current jiffies = %ld", HZ, jiffies);
+#endif // end FOO_STANDARD_TIMER
+
+#if FOO_PROC_FILE
+    // proc file create
+    foo_proc_create();
+    usr_msg("proc file created");
+#endif // end #if FOO_PROC_FILE
+
+#if FOO_TASKLET
+
+#endif  // end #if FOO_TASKLET
+    return ret;
+
+err_foo_device_create:
+    cdev_del(&foo_dev_info->foo_cdev);
+    unregister_chrdev_region(foo_dev_info->foo_dev_number, 1);
+err_chrdev_register:
+    kfree(foo_dev_info);
+    return ret;
+}
+
+static void __exit foo_device_exit(void)
 {
     int retval;
-    
+    usr_msg("module uninstall protocol");
     device_destroy(foo_dev_info->foo_class, foo_dev_info->foo_dev_number);
     class_destroy(foo_dev_info->foo_class);
     cdev_del(&foo_dev_info->foo_cdev);
     unregister_chrdev_region(foo_dev_info->foo_dev_number, 1);
     kfree(foo_dev_info);
-
+#if FOO_STANDARD_TIMER
     retval = del_timer(&foo_time);
     if (retval)
         err_msg("The timer is still in use...\n");
     usr_msg("Timer module unloaded\n");
-    usr_msg("timer_jiffy exit success");
+    usr_msg("standard timer exit success");
+#endif  // end #if FOO_STANDARD_TIMER
+    usr_msg("foo_device module uninstall success");
 }
 
-module_init(timer_jiffy_init);
-module_exit(timer_jiffy_exit);
+module_init(foo_device_init);
+module_exit(foo_device_exit);
 
 MODULE_LICENSE("GPL v2");
 MODULE_AUTHOR("quan");

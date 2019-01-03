@@ -1,26 +1,50 @@
-#include "foo_proc.h"
+#include "foo_waitqueue.h"
 #include <linux/time.h>	// for get system current time
 #include <linux/proc_fs.h>
+#include <linux/workqueue.h>
+#include <linux/wait.h>
 
-/*-------------- proc file create start ------------------*/
+#define FOO_WAIT_QUEUE          1
+#define FOO_HRT_TIMER           0
 
 
-#define FOO_PROC_NAME               "foo_proc"
 
-struct proc_dir_entry   *foo_proc_dir;
+/*-------------- wait queue create start ------------------*/
+#if FOO_WAIT_QUEUE
 
-int foo_proc_create(void)
+static DECLARE_WAIT_QUEUE_HEAD(foo_queue_head);
+// static struct wait_queue_head_t     foo_queue_head;
+static struct work_struct           foo_queue_work;
+static int condition = 1;
+
+static void foo_queue_recall_function(struct work_struct *work)
 {
-    foo_proc_dir = proc_create(FOO_PROC_NAME, 0666, NULL, &foo_fops);
-    if(IS_ERR(foo_proc_dir)){
-        return -ENOMEM;
-    }
-    return 0;
+    if(condition < 10) {
+    usr_msg("get in waitqueue recall fuction, current condition = %d", condition);
+    condition += 1;
+    wake_up_interruptible(&foo_queue_head);
+    usr_msg("queue has been woke-up, current condition = %d", condition);
+
+    // if need recall wait queue in this file
+    msleep(1000);
+    // readd waitqueue to system schedule
+    schedule_work(&foo_queue_work);
+    // if condition true kill queue
+   }
 }
 
+void foo_waitqueue_init(void)
+{
+    init_waitqueue_head(&foo_queue_head);
+    INIT_WORK(&foo_queue_work, foo_queue_recall_function);
+    schedule_work(&foo_queue_work);
+    wait_event_interruptible(foo_queue_head, condition != 0);
+    usr_msg("waitqueue_created, init codition =  %d", condition);
+}
 
-
-/*-------------- proc file create end ------------------*/
+#endif  //end #if FOO_WAIT_QUEUE
+/*-------------- wait queue create end ------------------*/
+#if FOO_HRT_TIMER
 void foo_timer_callback(unsigned long arg)
 {
     struct timeval tm_val;
@@ -62,7 +86,7 @@ int foo_timer_init(void)
 
     return retval;
 }
-
+#endif  //end #if FOO_HRT_TIMER
 static int timer_open(struct inode *inode, struct file *filp)
 {
     usr_msg( "open"); 
@@ -133,22 +157,23 @@ static int __init timer_jiffy_init(void)
     if(ret < 0)
         goto err_foo_device_create;
     
-    usr_msg("timer_jiffy create success");
+    
     
     
     
     // timer, if only init, can only run once foo_timer_callback
     // every timer run foo_timer_callback, timer need to bu update!
+#if FOO_HRT_TIMER
     ret = foo_timer_init();
     if(0 != ret) {
         err_msg("timer init failed");
     }
     usr_msg("timer init succeed, current jiffies = %ld", jiffies);
-
-
-    // proc file create
-    foo_proc_create();
-    usr_msg("proc file created");
+#endif
+#if FOO_WAIT_QUEUE
+    // waitqueue create
+    foo_waitqueue_init();
+#endif
     
     return ret;
 
@@ -190,18 +215,20 @@ err_class_create:
 static void __exit timer_jiffy_exit(void)
 {
     int retval;
-    
+    usr_msg("module exit");
     device_destroy(foo_dev_info->foo_class, foo_dev_info->foo_dev_number);
     class_destroy(foo_dev_info->foo_class);
     cdev_del(&foo_dev_info->foo_cdev);
     unregister_chrdev_region(foo_dev_info->foo_dev_number, 1);
     kfree(foo_dev_info);
-
+    
+#if FOO_HRT_TIMER
     retval = del_timer(&foo_time);
     if (retval)
-        err_msg("The timer is still in use...\n");
-    usr_msg("Timer module unloaded\n");
+        err_msg("The timer is still in use...");
+    usr_msg("Timer module unloaded");
     usr_msg("timer_jiffy exit success");
+#endif
 }
 
 module_init(timer_jiffy_init);

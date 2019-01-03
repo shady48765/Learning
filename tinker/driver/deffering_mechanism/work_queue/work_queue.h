@@ -16,6 +16,7 @@
 #include <linux/timer.h>        //for timer_list, jiffy timer, standard timer
 #include <linux/raid/pq.h>
 #include <linux/mutex.h>
+#include <linux/delay.h>
 
 #define TIMER_TAG                   " <PROC> "
 #define USR_MSG_LEVEL               KERN_ERR

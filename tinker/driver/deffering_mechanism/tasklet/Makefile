@@ -5,7 +5,7 @@ CURDIR := $(shell pwd)
 
 
 # module install name
-MODULE_NAME = task_list
+MODULE_NAME = foo_tasklet
 # Kernel modules
 obj-m += ${MODULE_NAME}.o
 # Specify flags for the module compilation.
