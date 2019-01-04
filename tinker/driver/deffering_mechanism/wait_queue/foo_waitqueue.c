@@ -24,14 +24,12 @@ static void foo_queue_recall_function(struct work_struct *work)
     condition += 1;
     wake_up_interruptible(&foo_queue_head);
     usr_msg("queue has been woke-up, current condition = %d", condition);
-
     // reschedule 10 times
     if(1 == foo_waitqueue_repeat_schedule && counter < 10) {
         msleep(1000);
         schedule_work(&foo_queue_work);
     }
    else {
-       // normally program will not reached here
        // after 10 times schedule_work, program will be suspend
        usr_msg("skip wake_up_interruptible, condition = %d", condition);
    }

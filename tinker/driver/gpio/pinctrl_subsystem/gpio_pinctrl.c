@@ -89,11 +89,8 @@ static long laser_ioctl(struct file *flip, unsigned int cmd,
 {
     usr_msg("device dev_ioctl");
     int delay_timer, ret, temp, gpio_status;
-<<<<<<< Updated upstream
 
 
-=======
->>>>>>> Stashed changes
     switch(cmd)
     {
         case LED_TEST :
