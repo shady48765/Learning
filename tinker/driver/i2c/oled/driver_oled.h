@@ -4,7 +4,7 @@
 #include <linux/cdev.h>
 #include <linux/of.h>
 #include <linux/devices.h>
-#include <linux/fs.h>                       // ioctl and file_operations support 
+#include <linux/fs.h>                       // ioctl and file_operations support
 #include <linux/gpio.h>                     /* For Legacy integer based GPIO */
 #include <linux/init.h>
 #include <linux/interrupt.h>                /* For IRQ */
@@ -24,32 +24,49 @@
 #include <linux/slab.h>
 #include <linux/uaccess.h>
 #include <linux/mutex.h>
+#include <linux/proc.h>
+
+#include "common_cmd.h"
+
+#define    OLED_DEV_NAME         "OLED_SSD1306"
 
 
-#define MAGIC_NO            'G'
-#define SET 				0x61
-#define RESET				0x62
-#define BLINK				0x63
-#define STATUS				0x64
-#define TEST				0x65
-#define INIT                0x66
 
-#define OLED_TEST 			_IO(MAGIC_NO, TEST)
-#define OLED_INIT           _IO(MAGIC_NO, INIT)
-#define OLED_SET 			_IOW(MAGIC_NO, SET, unsigned int)
-#define OLED_RESET			_IOW(MAGIC_NO, RESET, unsigned int)
-#define OLED_BLINK			_IOW(MAGIC_NO, BLINK, unsigned int)			// param is timer delay
-#define OLED_STATUS			_IOR(MAGIC_NO, STATUS, int)
+typedef enum {
+    off = 0,
+    on
+}status;
+    
+    
+static int oled_open(struct inode *inode, struct file *filp);
+static int oled_close(struct inode *inode, struct file *filp);
+static ssize_t oled_write(struct file *flip, const char __user *buff,
+                                    size_t counter, loff_t *fops);
+long oled_ioctl (struct file *flip, unsigned int cmd, unsigned long param);
 
-struct i2c_device oled_i2c;
 
-struct data_info {
-        
+struct file_operations fops = {
+    .open = oled_open,
+    .release = oled_close,
+    .write = oled_write,
+    .unlocked_ioctl = oled_ioctl,
 };
 
-struct data_report {
-    
-}
+static struct oled_device {
+    unsigned int    oled_major_number;
+    dev_t           oled_dev_number;
+    struct cdev     oled_cdev;
+    struct class    *oled_class;
+    struct device   *oled_device;
+};
+
+struct oled_info_struct {
+    struct cdev             oled_dev;
+    struct file_operations  oled_fops;
+    struct oled_device      oled_dev;
+};
+struct oled_info_struct     *oled_info;
+
 
 
 #endif
