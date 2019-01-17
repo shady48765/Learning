@@ -1,8 +1,9 @@
+// 0.91 inch oled 128x64
 &i2c1 {
-    oled: ss1306@3c {
+    oled: ss1306@7b {
         compatible = "oled, ssd1306";
         freq = <200000>;
-        ret = <0x3c>;
+        ret = <0x7b>;
         width = <128>;
         height = <64>;
         oled-rst = <&gpio0 RK_PC1 GPIO_ACTIVE_HIGH &pcfg_pull_up>;  // GPIO0C1
