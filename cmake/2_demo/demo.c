@@ -2,6 +2,6 @@
 
 int main(void)
 {
-	printf("cmake test\n");
+	printf("---> set\n");
 	return 0;
 }
