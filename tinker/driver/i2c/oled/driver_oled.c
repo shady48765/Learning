@@ -13,6 +13,45 @@
 
 
 
+
+struct of_device_id *oled_device_id[] = {
+    { compatible = "oled, ssd1306" },
+    {/*keep this*/},
+};
+// MODULE_DEVICE_TABLE(of, of_match_ptr(oled_device_id));
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 /*-------------- workqueue start -------------------------------------------*/
 
 #if OLED_WORKQUEUE
@@ -184,7 +223,7 @@ static ssize_t oled_read (struct file *flip, char __user *buff,
     usr_msg( "read");
     return 0;
 }
-long oled_ioctl (struct file *flip, unsigned int cmd, unsigned long param)
+static long oled_ioctl (struct file *flip, unsigned int cmd, unsigned long param)
 {
     usr_msg( "ioctl");
     return 0;
@@ -348,18 +387,16 @@ static void __exit oled_exit(void)
 
 
 
-struct oled_i2c_device {
-    unsigned char * data;
-    int curr_pointer;
-    struct i2c_client   *client;
-    struct cdev         cdev;
-    struct mutex        oled_mutex;
-};
 
 
 
 
 
+
+
+
+
+#if 0
 struct bus_type oled_bus_type = {
     
 };
@@ -367,17 +404,54 @@ struct bus_type oled_bus_type = {
 struct notifier_block oled_notifier_block = {
     .notifier_call = 
 };
+#endif
 
-static struct i2c_client * oled_client;
+
+struct oled_i2c_device {
+    unsigned char 		* data;
+    struct i2c_client   *oled_client;
+    struct mutex        lock;
+};
+
+
+static int oled_get_dts_info(struct platform_device *pdev)
+{
+	int ret = 0;
+	oled_dts_info = NULL;
+	oled_dts_info->node = of_find_matching_node(node, oled_device_id);
+	if(!oled_dts_info->node) {
+		err_msg("oled_dts_info kmalloc error.");
+		ret =  -ENOMEM;
+		goto err_no_mem:
+	} else {
+		// get dts information
+		of_property_read_u32(oled_dts_info->node, "width", &oled_dts_info->oled_width);
+		usr_msg("---> width = %d", oled_dts_info->oled_width);
+		of_property_read_u32(oled_dts_info->node, "height", &oled_dts_info->oled_height);
+		usr_msg("---> height = %d", oled_dts_info->oled_height);
+	}
+	// get dts gpio configurations
+	devm_pinctrl_get(struct device * dev);
+	pinctrl_lookup_state(struct pinctrl * p, const char * name);
+	oled_rst = of_get_named_gpio(struct device_node * np, const char * propname, int index);
+
+err_no_mem:
+	kfree(oled_dts_info);
+}
+
+
 
 static int oled_probe(struct i2c_client * client, const struct i2c_device_id *i2c_id)
 {
     usr_msg("move in");
-    if(!i2c_check_functionality(client->adapter, I2C_FUNC_I2C))
-        return -ENODEV;
+	oled_get_dts_info();
+    if(!i2c_check_functionality(client->adapter, I2C_FUNC_I2C)) {
+		err_msg("i2c check failed");
+		return -ENODEV;
+    }
     
     dev_info(&client->dev, "chip found, driver verison" OLED_DRIVER_VERSION "\n");
-    
+
     oled_client = client;
 
     oled_init();
@@ -387,21 +461,13 @@ static int oled_probe(struct i2c_client * client, const struct i2c_device_id *i2
     return 0;
 
 
-
+#if 0
     /* Keep track of adapters which will be added or removed later */
 	res = bus_register_notifier(&i2c_bus_type, &i2cdev_notifier);
 	if (res)
 		goto out_unreg_class;
-    
+#endif
 }
-
-
-struct platform_device_id *oled_device_id[] = {
-    { compatible = "oled, ssd1306" },
-    {/*keep this*/},
-};
-// MODULE_DEVICE_TABLE(of, of_match_ptr(oled_device_id));
-
 
 struct platform_driver oled_driver = {
     .driver = {
@@ -415,6 +481,8 @@ struct platform_driver oled_driver = {
 };
 
 module_i2c_driver(oled_driver);
+
+
 
 MODULE_LICENSE("GPL v2");
 MODULE_AUTHOR("quan, <shusheng1991@gmail.com>");

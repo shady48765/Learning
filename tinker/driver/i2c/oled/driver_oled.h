@@ -54,7 +54,8 @@ static int oled_open(struct inode *inode, struct file *filp);
 static int oled_close(struct inode *inode, struct file *filp);
 static ssize_t oled_write(struct file *flip, const char __user *buff,
                                     size_t counter, loff_t *fops);
-long oled_ioctl (struct file *flip, unsigned int cmd, unsigned long param);
+static long oled_ioctl (struct file *flip, unsigned int cmd, unsigned long param);
+static int oled_get_dts_info(void);
 
 
 struct file_operations fops = {
@@ -73,12 +74,23 @@ static struct oled_device {
     struct mutex    oled_mutex;
 };
 
-struct oled_info_struct {
+static struct oled_info_struct {
     struct file_operations  oled_fops;
     struct oled_device      oled_device;
 };
 struct oled_info_struct     *oled_info;
 
 struct timer_list oled_time;
+
+
+static struct dts_information = {
+	struct device_node * node;
+	int oled_rst;
+	unsigned int oled_width;
+	unsigned int oled_height;
+	unsigned int oled_i2c_clk;
+};
+struct dts_information * oled_dts_info;
+
 
 #endif
