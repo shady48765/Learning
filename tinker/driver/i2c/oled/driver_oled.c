@@ -1,4 +1,4 @@
-#include "driver_oled.h"
+/* oled whole information struction ---------------------------------------*/#include "driver_oled.h"
 
 #define OLED_WORKQUEUE                   1
 #define OLED_TASKLET                     0
@@ -414,46 +414,31 @@ struct oled_i2c_device {
 };
 
 
-static int oled_get_dts_info(struct platform_device *pdev)
+
+static int oled_i2c_probe(struct i2c_client * client, const struct i2c_device_id *i2c_id)
 {
-	int ret = 0;
-	oled_dts_info = NULL;
-	oled_dts_info->node = of_find_matching_node(node, oled_device_id);
-	if(!oled_dts_info->node) {
-		err_msg("oled_dts_info kmalloc error.");
-		ret =  -ENOMEM;
-		goto err_no_mem:
-	} else {
-		// get dts information
-		of_property_read_u32(oled_dts_info->node, "width", &oled_dts_info->oled_width);
-		usr_msg("---> width = %d", oled_dts_info->oled_width);
-		of_property_read_u32(oled_dts_info->node, "height", &oled_dts_info->oled_height);
-		usr_msg("---> height = %d", oled_dts_info->oled_height);
-	}
-	// get dts gpio configurations
-	devm_pinctrl_get(struct device * dev);
-	pinctrl_lookup_state(struct pinctrl * p, const char * name);
-	oled_rst = of_get_named_gpio(struct device_node * np, const char * propname, int index);
+    int ret = 0;
 
-err_no_mem:
-	kfree(oled_dts_info);
-}
-
-
-
-static int oled_probe(struct i2c_client * client, const struct i2c_device_id *i2c_id)
-{
+	
     usr_msg("move in");
-	oled_get_dts_info();
     if(!i2c_check_functionality(client->adapter, I2C_FUNC_I2C)) {
 		err_msg("i2c check failed");
 		return -ENODEV;
     }
     
     dev_info(&client->dev, "chip found, driver verison" OLED_DRIVER_VERSION "\n");
+	
+	ret = struct_mallock_init();
+	if(ret < 0) {
+		err_msg("struct malloc error");
+		return -ENOMEM;
+	}
+	
+	oled_info->i2c_info->oled_client = client;
+	
+	oled_get_dts_info();
 
-    oled_client = client;
-
+	
     oled_init();
     oled_clear();
     oled_show_string(6, 1, "Bootting...", 16);
@@ -469,23 +454,201 @@ static int oled_probe(struct i2c_client * client, const struct i2c_device_id *i2
 #endif
 }
 
-struct platform_driver oled_driver = {
+
+
+
+static struct of_device_id oled_i2c_table[] = {
+	{.compatible = "oled, ssd1306"},
+	{/* keep this */},
+};
+MODULE_DEVICE_TABLE(of, of_match_ptr(oled_table));
+
+static struct i2c_driver oled_i2c_driver = {
     .driver = {
         .owner = THIS_MODULE,
         .name = OLED_DEV_NAME,
         .of_match_table = of_match_ptr(oled_device_id),
         
     },
-    .probe = oled_probe,
-    .remove = oled_remove,
+    .probe = oled_i2c_probe,
+    .remove = oled_i2c_remove,
 };
 
-module_i2c_driver(oled_driver);
+
+
+static int oled_get_dts_info(struct platform_device *pdev)
+{
+	int ret = 0;
+	struct device_node * node = NULL;
+	
+	oled_info->dts_info->node = of_find_matching_node(node, oled_device_id);
+	if(!oled_info->dts_info->node) {
+		err_msg("oled_dts_info kmalloc error.");
+		ret =  -ENODEV;
+		goto err_no_dev;
+	} else {
+		// get dts information
+		of_property_read_u32(oled_info->dts_info->node, "width", &oled_info->dts_info->width);
+		usr_msg("---> width = %d", oled_info->dts_info->width);
+		of_property_read_u32(oled_info->dts_info->node, "height", &oled_info->dts_info->height);
+		usr_msg("---> height = %d", oled_info->dts_info->height);
+		
+		// get dts gpio configurations
+		devm_pinctrl_get(struct device * dev);
+		dev_pinctrl = devm_pinctrl_get(&oled_info->i2c_info->oled_client.dev);
+		rst_high = pinctrl_lookup_state(dev_pinctrl, "oled_rst_set_high");
+		rst_low = pinctrl_lookup_state(dev_pinctrl, "oled_rst_set_low");
+	}
+
+err_no_dev:
+	kfree(oled_info);
+	return ret;
+}
+
+static int struct_mallock_init(void)
+{
+	int ret = 0;
+	
+	usr_msg("struct malloc and initilaziton.");
+	oled_dts_info = kmalloc(sizeof(struct _oled_dts_info), GFP_KERNEL);
+	if(IS_ERR(oled_info)) {
+		err_msg("malloc struct < oled_dts_info > error");
+		ret = -ENOMEM;	
+		return ret;
+	}
+	oled_dev_info = kmalloc(sizeof(struct _oled_device_info), GFP_KERNEL);
+	if(IS_ERR(oled_info)) {
+		err_msg("malloc struct < oled_dev_info > error");
+		ret = -ENOMEM;	
+		goto err_oled_dev_info;
+	}
+	oled_i2c_info = kmalloc(sizeof(struct _oled_i2c_info), GFP_KERNEL);
+	if(IS_ERR(oled_info)) {
+		err_msg("malloc struct < oled_i2c_info > error");
+		ret = -ENOMEM;	
+		goto err_oled_i2c_info;
+	}
+
+	return 0;
+
+err_oled_i2c_info:
+	kfree(oled_dev_info);
+err_oled_dev_info:
+	kfree(oled_dts_info);
+
+	return ret;
+	
+}
+
+static int register_oled_driver(void)
+{	
+	int ret = 0;
+	ret = alloc_chrdev_region(&oled_dev_info->oled_devno , 0, 1, OLED_DEV_NAME);
+	if(ret < 0) {
+		err_msg("error : alloc_chrdev_region");
+		ret = -ENODEV;
+		goto out;
+	}
+	oled_dev_info->oled_major = MAJOR(oled_dev_info->oled_cdev);
+	usr_msg("---> dev_info->oled_devno = %d", oled_dev_info->oled_devno);
+#if 0
+	oled_dev_info->oled_cdev = cdev_alloc();
+	if(IS_ERR(oled_dev_info->oled_cdev)) {
+		err_msg("error : cdev_alloc");
+		goto err_cdev_alloc;
+	}
+#endif
+
+	cdev_init(&oled_dev_info->oled_cdev, &fops);
+	ret = cdev_add(&oled_dev_info->oled_cdev , oled_dev_info->oled_devno, 1);
+	if(ret < 0) {
+		err_msg("error : cdev_add.");
+		goto err_cdev_add;
+	}
+
+	class_create
 
 
 
-MODULE_LICENSE("GPL v2");
+	
+	return ret;
+
+err_cdev_add:
+	cdev_del(*oled_dev_info->oled_cdev);
+err_cdev_alloc:
+	unregister_chrdev_region(oled_dev_info->oled_devno, 1);
+out:
+	return ret;
+}
+
+static int oled_probe(struct platform_device * pdev)
+{
+	usr_msg("---> moved in");
+
+	int ret = 0;
+	
+	ret = struct_mallock_init();
+	if(ret < 0) {
+		err_msg("error : malloc.");
+		return ret;
+	}
+	ret = oled_get_dts_info(pdev)
+	if(ret < 0) {
+		err_msg("error : get dts information.");
+		return ret;
+	}
+	ret = register_oled_driver()
+	if(ret < 0) {
+		err_msg("error : oled driver register.");
+		return ret;
+	}
+
+	
+}
+
+static int oled_remove(struct platform_device * pdev)
+{
+	
+}
+
+
+
+
+
+static of_device_id oled_table[] = {
+	{.compatible = "oled-pins",},
+	{/* keep this */},
+}
+MODULE_DEVICE_TABLE(of, of_match_ptr(oled_table));
+
+static struct platform_driver oled_driver = {
+	.probe = oled_probe,
+	.remove = oled_remove,
+	.driver = {
+		.owner = THIS_MODULE,
+		.name = OLED_DEV_NAME,
+		.of_match_table = of_match_ptr(oled_table),
+	},
+};
+
+static int __init oled_init(void)
+{
+	usr_msg("oled driver init");
+	platform_driver_register(&oled_driver);
+}
+
+static void __exit oled_exit(void)
+{
+	usr_msg("oled driver exit");
+	platform_driver_unregister(&oled_driver);
+}
+
+module_init(oled_init);
+module_exit(oled_exit);
+
+MODULE_LICENSE("GPL");
 MODULE_AUTHOR("quan, <shusheng1991@gmail.com>");
+MODULE_ALIAS("i2c :" OLED_DEV_NAME);
 MODULE_DESCRIPTION("OLED Driver, Contrl with SSD1306");
 MODULE_VERSION(OLED_DRIVER_VERSION);
 

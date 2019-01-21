@@ -26,7 +26,6 @@
 *.lzma
 *.order
 *.so.dbg
-*.patch
 *.symtypes
 modules.builtin
 Module.symvers

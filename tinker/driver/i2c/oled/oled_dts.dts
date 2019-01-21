@@ -18,6 +18,20 @@
 /*-------------------- way 2: pinctrl start ------------------------*/
 // 2 --------------- pinctrl way -----------
 // 0.91 inch oled 128x64
+
+oled {
+        compatible = "oled-pins";
+        label = "oled-rst-pins";
+        pinctrl-name = "default",
+                        "oled_rst_set_high",
+                        "oled_rst_set_low";
+        // GPIO0C1
+        pinctrl-0 = <&default>;
+        pinctrl-1 = <&oled_rst_high>;
+        pinctrl-2 = <&oled_rst_low>;
+        status = "okay";
+}
+
 &i2c1 {
     oled: ss1306@7b {
         compatible = "oled, ssd1306";
@@ -27,15 +41,7 @@
         height = <64>;
         page-offset = <0>;
         
-        pinctrl-name = "default",
-                        "oled_rst_set_high",
-                        "oled_rst_set_low";
-        pinctrl-0 = <&default>;
-        pinctrl-1 = <&oled_rst_high>;
-        pinctrl-2 = <&oled_rst_low>;
-        // GPIO0C1
-        
-        status = "ok";
+        status = "okay";
     };
 };
 // GPIO0C1
