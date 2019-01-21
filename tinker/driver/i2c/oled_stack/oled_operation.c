@@ -1,5 +1,6 @@
-#include "oled.h"
+#include "oled_operation.h"
 #include "oled_font.h"
+#include "driver_oled.h"
 
 #define SSD1306_CMD    	0x00
 #define SSD1306_DAT    	0x40
@@ -11,6 +12,19 @@
 #define OLED_CMD  0	//写命令
 #define OLED_DATA 1	//写数据
 
+int iic_write_reg(unsigned char cmd, unsigned char val)
+{
+	return i2c_master_reg8_send(oled_client, cmd, &val, sizeof(val), 100000);
+}
+
+char Write_IIC_Command(unsigned char IIC_Command)
+{
+	return iic_write_reg(SSD1306_CMD, IIC_Command);
+}
+char Write_IIC_Data(unsigned char IIC_Data)
+{
+	return iic_write_reg(SSD1306_DAT, IIC_Data);
+}
 
 void oled_write_byte(unsigned dat,unsigned cmd)
 {

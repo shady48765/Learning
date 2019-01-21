@@ -5,9 +5,11 @@ CURDIR := $(shell pwd)
 
 
 # module install name
-MODULE_NAME = foo_i2c_driver
+MODULE_NAME = driver_oled
 # Kernel modules
-obj-m += ${MODULE_NAME}.o
+obj-m += ${MODULE_NAME}.o \
+		 oled_operation.o 
+
 # Specify flags for the module compilation.
 #EXTRA_CFLAGS=-g -O0
 

@@ -68,29 +68,6 @@ typedef enum {
 }status;
 
 
-
-extern void oled_write_byte(unsigned dat,unsigned cmd);
-extern void oled_show_char(unsigned charx,unsigned char y,
-                                unsigned char chr,unsigned char char_size);
-extern void oled_show_string(unsigned char x,unsigned char y,
-                                    unsigned char *chr,unsigned char char_size);
-    
-extern void oled_init(void);
-extern  void oled_clear(void);
-extern void oled_on(void);
-extern void oled_off(void);
-extern   char Write_IIC_Data(unsigned char IIC_Data);
-extern int iic_write_reg(unsigned char cmd, unsigned char val);
-extern char Write_IIC_Command(unsigned char IIC_Command);
-static int i2c_master_reg8_send(const struct i2c_client *client, const char reg, 
-                                                const char *buf, int count, int scl_rate);
-
-
-
-
-    
-
-
 static int oled_open(struct inode *inode, struct file *filp);
 static int oled_close(struct inode *inode, struct file *filp);
 static ssize_t oled_write(struct file *flip, const char __user *buff,

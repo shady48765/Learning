@@ -17,30 +17,6 @@ struct notifier_block oled_notifier_block = {
 };
 #endif
 
-//i2c发送函数 *client 设备  reg 寄存器  *buf 数据 count  数据大小  scl_rate i2c速率
-static int i2c_master_reg8_send(const struct i2c_client *client, const char reg, 
-                                                const char *buf, int count, int scl_rate)
-{
-    struct i2c_adapter *adap=client->adapter;
-    struct i2c_msg msg;
-    int ret;
-    char *tx_buf = (char *)kzalloc(count + 1, GFP_KERNEL);
-    if(!tx_buf)
-        return -ENOMEM;
-    tx_buf[0] = reg;
-    memcpy(tx_buf+1, buf, count); 
- 
-    msg.addr = client->addr;
-    msg.flags = client->flags;
-    msg.len = count + 1;
-    msg.buf = (char *)tx_buf;
-    msg.scl_rate = scl_rate;
- 
-    ret = i2c_transfer(adap, &msg, 1); 
-    kfree(tx_buf);
-    return (ret == 1) ? count : ret;
- 
-}
 
 
 
@@ -107,6 +83,7 @@ static struct i2c_driver oled_i2c_driver = {
 
 void add_oled_i2c_driver(void)
 {
+    // platform_register_drivers(drivers, count)
     i2c_add_driver(&oled_i2c_driver);
 }
 
@@ -228,8 +205,9 @@ static int register_oled_driver(void)
 err_dev_create:
     class_destroy(oled_dev_info->oled_class);
 err_cls_create:
-	cdev_del(&oled_dev_info->oled_cdev);
 err_cdev_add:
+	cdev_del(&oled_dev_info->oled_cdev);
+err_cdev_alloc:
 	unregister_chrdev_region(oled_dev_info->oled_devno, 1);
 out:
 	return ret;
@@ -240,8 +218,7 @@ static int oled_probe(struct platform_device * pdev)
 {
 	usr_msg("---> moved in");
 
-	int ret;
-    int index;
+	int ret = 0;
 
 	ret = struct_mallock_init();
 	if(ret < 0) {
@@ -258,7 +235,7 @@ static int oled_probe(struct platform_device * pdev)
 		err_msg("error : oled driver register.");
 		return ret;
 	}
-    
+    int index;
     for(index = 0; index < 5; index++) {
         pinctrl_select_state(oled_dts_info->dev_pinctrl,oled_dts_info->rst_high);
         mdelay(1000);
@@ -267,7 +244,6 @@ static int oled_probe(struct platform_device * pdev)
     }
     add_oled_i2c_driver();
 
-    return 0;
 
 }
 
