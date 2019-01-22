@@ -5,6 +5,19 @@
 
 #define     OLED_DRIVER_VERSION         "0.1"
 
+static int oled_open(struct inode *inode, struct file *filp);
+static int oled_close(struct inode *inode, struct file *filp);
+static ssize_t oled_write(struct file *flip, const char __user *buff,
+                                    size_t counter, loff_t *fops);
+static long oled_ioctl (struct file *flip, unsigned int cmd, 
+                            unsigned long param);
+
+static struct file_operations fops = {
+    .open           = oled_open,
+    .release        = oled_close,
+    .write          = oled_write,
+    .unlocked_ioctl = oled_ioctl,
+};
 
 
 #if 0
@@ -17,32 +30,28 @@ struct notifier_block oled_notifier_block = {
 };
 #endif
 
-//i2c发送函数 *client 设备  reg 寄存器  *buf 数据 count  数据大小  scl_rate i2c速率
-static int i2c_master_reg8_send(const struct i2c_client *client, const char reg, 
-                                                const char *buf, int count, int scl_rate)
+
+int gpio_staus_set(status state)
 {
-    struct i2c_adapter *adap=client->adapter;
-    struct i2c_msg msg;
-    int ret;
-    char *tx_buf = (char *)kzalloc(count + 1, GFP_KERNEL);
-    if(!tx_buf)
-        return -ENOMEM;
-    tx_buf[0] = reg;
-    memcpy(tx_buf+1, buf, count); 
- 
-    msg.addr = client->addr;
-    msg.flags = client->flags;
-    msg.len = count + 1;
-    msg.buf = (char *)tx_buf;
-    msg.scl_rate = scl_rate;
- 
-    ret = i2c_transfer(adap, &msg, 1); 
-    kfree(tx_buf);
-    return (ret == 1) ? count : ret;
- 
+	int ret = 0;
+    mutex_lock(&oled_dev_info->oled_dev_lock);
+    if(low == state) {
+        ret = pinctrl_select_state(oled_dts_info->dev_pinctrl,oled_dts_info->rst_low);
+		if(ret < 0) {
+			err_msg("error : set oled_dts_info->rst_low");
+			ret = -EIO;
+		}
+		
+    } else {
+        ret = pinctrl_select_state(oled_dts_info->dev_pinctrl,oled_dts_info->rst_high);
+		if(ret < 0) {
+			err_msg("error : set oled_dts_info->rst_high");
+			ret = -EIO;
+		}
+    }
+    mutex_unlock(&oled_dev_info->oled_dev_lock);
+	return ret;
 }
-
-
 
 static int oled_i2c_probe(struct i2c_client * client, const struct i2c_device_id *i2c_id)
 {
@@ -67,9 +76,9 @@ static int oled_i2c_probe(struct i2c_client * client, const struct i2c_device_id
     mutex_init(&oled_i2c_info->oled_i2c_lock);
 
 
-    oled_init();
-    oled_clear();
-    oled_show_string(6, 1, "Bootting...", 16);
+    // oled_init();
+    // oled_clear();
+    // oled_show_string(6, 1, "Bootting...", 16);
 
     return 0;
 
@@ -145,7 +154,7 @@ static long oled_ioctl (struct file *flip, unsigned int cmd, unsigned long param
 
 
 
-static int struct_mallock_init(void)
+int struct_mallock_init(void)
 {
 	int ret = 0;
 
@@ -181,7 +190,7 @@ err_oled_dev_info:
 
 }
 
-static int register_oled_driver(void)
+int register_oled_driver(void)
 {
 	int ret = 0;
 	ret = alloc_chrdev_region(&oled_dev_info->oled_devno , 0, 1, OLED_DEV_NAME);
@@ -220,11 +229,8 @@ static int register_oled_driver(void)
         ret = PTR_ERR(oled_dev_info->oled_device);
         goto err_dev_create;
     }
-
-
-    
-
     return ret;
+
 err_dev_create:
     class_destroy(oled_dev_info->oled_class);
 err_cls_create:
@@ -238,10 +244,10 @@ out:
 
 static int oled_probe(struct platform_device * pdev)
 {
-	usr_msg("---> moved in");
-
 	int ret;
     int index;
+
+	usr_msg("---> moved in");
 
 	ret = struct_mallock_init();
 	if(ret < 0) {
@@ -260,15 +266,14 @@ static int oled_probe(struct platform_device * pdev)
 	}
     
     for(index = 0; index < 5; index++) {
-        pinctrl_select_state(oled_dts_info->dev_pinctrl,oled_dts_info->rst_high);
+        gpio_staus_set(high);
         mdelay(1000);
-        pinctrl_select_state(oled_dts_info->dev_pinctrl,oled_dts_info->rst_low);
+        gpio_staus_set(low);
         mdelay(1000);
     }
     add_oled_i2c_driver();
 
     return 0;
-
 }
 
 static int oled_remove(struct platform_device * pdev)
@@ -285,7 +290,8 @@ static int oled_remove(struct platform_device * pdev)
     kfree(oled_dev_info);
     kfree(oled_dts_info);
     kfree(oled_i2c_info);
-    
+
+	return 0;
 }
 
 static struct of_device_id oled_table[] = {
@@ -305,12 +311,11 @@ static struct platform_driver oled_driver = {
 	},
 };
         
-static int oled_get_dts_info(struct platform_device *pdev)
+int oled_get_dts_info(struct platform_device *pdev)
 {
     int ret = 0;
 
     mutex_lock(&oled_dev_info->oled_dev_lock);
-    
     
     oled_dts_info->node = of_find_matching_node(NULL, oled_table);
     if(!oled_dts_info->node) {
@@ -343,7 +348,6 @@ static int oled_get_dts_info(struct platform_device *pdev)
             ret = PTR_ERR(oled_dts_info->rst_low);
             goto err_no_dev;
         }
-
         // set default state
         pinctrl_select_state(oled_dts_info->dev_pinctrl,oled_dts_info->rst_high);
     }
@@ -354,12 +358,12 @@ err_no_dev:
     return ret;
 }
 
+EXPORT_SYMBOL(oled_get_dts_info);
 
 module_platform_driver(oled_driver);
-
 
 MODULE_LICENSE("GPL");
 MODULE_AUTHOR("quan, <shusheng1991@gmail.com>");
 MODULE_ALIAS("i2c :" OLED_DEV_NAME);
-MODULE_DESCRIPTION("OLED Driver, Contrl with SSD1306");
+MODULE_DESCRIPTION("OLED Driver, control chip SSD1306");
 MODULE_VERSION(OLED_DRIVER_VERSION);
