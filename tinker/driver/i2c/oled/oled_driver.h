@@ -31,17 +31,22 @@
 // #include <linux/interrupt.h>
 #include <linux/workqueue.h>
 #include <linux/fb.h>
-#include <asm/uaccess.h>
 #include <linux/err.h>
-
+#include <linux/timer.h>        //for timer_list, jiffy timer, standard timer
 #include <linux/i2c.h>
 
 
 
-#define OLED_DEBUG					0
+#define OLED_DEBUG					 0
+#define HRTIMER_DEFINE               0
+#define I2C_16_BIT_MODE				 0
 
 
-#define TAG                         " < OLED > "
+#define READ_FLAG			0x0001
+#define WRITE_FLAG			0x0000
+
+
+#define TAG                         " <OLED> "
 #define USR_MSG_LEVEL               KERN_WARNING
 #define USR_ERR_LEVEL               KERN_ERR
 #define usr_msg(fmt, args...)       printk(USR_MSG_LEVEL TAG " (function : %s), [line : %d] "fmt"\n",__func__, __LINE__, ##args)
@@ -56,18 +61,20 @@ typedef enum {
     high    = 1
 }status;
 
-int gpio_set_state(status state);
+
+void gpio_set_state(status state);
 int struct_mallock_init(void);
-int oled_get_gpio_dts_info(struct platform_device *pdev);
-int oled_get_i2c_dts_info(struct device_node *dev_node);
+void struct_mallock_free(void);
+int oled_get_i2c_dts_info(struct device *oled_dev);
 int register_oled_driver(void);
 
-int i2c_send_byte(struct i2c_client * client, unsigned char data);
-int i2c_recv_byte(struct i2c_client * client, unsigned char *data);
-int i2c_send_matrix(struct i2c_client * client, unsigned char * buff, unsigned char length);
-unsigned char * i2c_recv_matrix(struct i2c_client * client, unsigned char * buff, unsigned char length);
+int oled_i2c_send_byte(struct i2c_client * client, unsigned char addr, unsigned char data);
+int oled_i2c_send_matrix(struct i2c_client * client, unsigned char addr, unsigned char *data, unsigned int length);
 void waitqueue_init(void);
-	
+
+/* extern function declartion ------------------------------------------------*/
+extern void oled_power_on(void);
+extern void oled_init(void);
 /* oled device information struction ---------------------------------------*/
 struct _oled_device_info {
     unsigned int    oled_major;
@@ -81,8 +88,8 @@ extern struct _oled_device_info * oled_dev_info;
 
 /* oled dts information struction ---------------------------------------*/
 struct _oled_dts_info {
-	struct device_node 	       *node;
-	int 				       oled_rst;
+	struct device_node 	       	*node;
+	unsigned int 				oled_rst_pin;
 	unsigned int 		        oled_width;
 	unsigned int 		        oled_height;
 	unsigned int 		        oled_i2c_clk;
@@ -98,12 +105,16 @@ struct _oled_i2c_info {
 	struct i2c_client 	* oled_client;
 	char 				* data;
     struct mutex        oled_i2c_lock;
+    struct i2c_msg		oled_i2c_msg;
 };
 extern struct _oled_i2c_info * oled_i2c_info;
 
 /* oled whole information struction ---------------------------------------*/
 
 /* timer parameters initaliztion -------------------------------------------*/
-// static struct timer_list oled_time;
+#if HRTIMER_DEFINE
+    static struct   hrtimer     oled_timer;
+    void oled_timer_init(unsigned long ticks);
+#endif
 
 #endif

@@ -1,6 +1,3 @@
-# if signature error
-# CONFIG_MODULE_SIG=n
-
 ifneq ($(KERNELRELEASE),)
 	MODULE_NAME = oled_driver
 	${MODULE_NAME}_module-objs := 	oled_driver.o \
@@ -14,23 +11,20 @@ KVERS = $(shell uname -r)
 # module install name
 MODULE_NAME = oled_driver
 
+CC=gcc -Wall
 # module test app name
 APP_NAME = app_${MODULE_NAME}
 
-CROSS_COMPILE = arm-linux-gnueabihf-
-CC = $(CROSS_COMPILE)gcc
-
-# for aliyun server
-KERNEL_DIR = /arm/tinker/debian_kernel
-# for home virtual ubuntu 18.04
-# KERNEL_DIR = /home/quan/tinker/debian_kernel
-
+# get system verison
+KVERS := $(shell uname -r)
 # get driver floder path
-CUR_DIR = $(shell pwd)
+CUR_DIR := $(shell pwd)
+# Specify flags for the module compilation.
+#EXTRA_CFLAGS=-g -O0
 
-all : modules
+all: modules
 modules:
-	$(MAKE) -C $(KERNEL_DIR) M=$(CUR_DIR) modules ARCH=arm CROSS_COMPILE=arm-linux-gnueabihf-
+	make -C /lib/modules/$(KVERS)/build M=$(CUR_DIR) modules
 	@echo "---> kernel_modules build finished."
 
 app :
@@ -38,18 +32,19 @@ app :
 	@echo "---> app build finished."
 
 cleanall :
-	$(MAKE) -C $(KERNEL_DIR) M=$(CUR_DIR) clean
+	make -C /lib/modules/$(KVERS)/build M=$(CURDIR) clean
 	rm -rvf $(APP_NAME)
 	rm -rvf .*.?.sw?p
 	rm -rvf .*.?.swp
 	@echo "---> all clean."
 
 clean:
+	@echo "---> clean trash file."
 	rm -rvf .*.?.sw?p .*.?.swp *.o *.*.o .*.cmd .tmp_versions *.mod.c Module.symvers modules.order
 	@echo "---> clean finished."
 
 install:
-	@echo "---> install module ${MODULE_NAME}_module"
+	@echo "---> install module ${MODULE_NAME}_module.ko"
 	$(shell sudo insmod ${MODULE_NAME}_module.ko)
 remove:
 	@echo "---> remove module ${MODULE_NAME}_module"

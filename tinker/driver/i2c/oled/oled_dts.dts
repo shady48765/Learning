@@ -3,13 +3,13 @@
 &i2c1 {
     oled: ss1306@7b {
         compatible = "oled, ssd1306";
-        freq = <200000>;
+        clock-frequency = <200000>;
         ret = <0x7b>;
         width = <128>;
         height = <64>;
-        oled-rst = <&gpio0 RK_PC1 GPIO_ACTIVE_HIGH &pcfg_pull_up>;  // GPIO0C1
+        oled-rst = <&gpio6 RK_PA1 GPIO_ACTIVE_HIGH>;  // GPIO6A1
         page-offset = <0>;
-        status = "ok";
+        status = "okay";
     };
 };
 /*-------------------- way 1: of get gpio end ------------------------*/
@@ -19,23 +19,21 @@
 // 2 --------------- pinctrl way -----------
 // 0.91 inch oled 128x64
 
-oled {
+oled-rst {
         compatible = "oled-pins";
         label = "oled-rst-pins";
-        pinctrl-name = "oled_default",
-                        "oled_rst_set_high",
-                        "oled_rst_set_low";
-        // GPIO0C1
-        pinctrl-0 = <&oled_default>;
-        pinctrl-1 = <&oled_rst_high>;
-        pinctrl-2 = <&oled_rst_low>;
+        pinctrl-name = "default",
+                        "rst_low";
+        // GPIO6A1
+        pinctrl-0 = <&oled_rst_high>;
+        pinctrl-1 = <&oled_rst_low>;
         status = "okay";
 };
 
 &i2c1 {
     oled: ss1306@7b {
         compatible = "oled, ssd1306";
-        freq = <200000>;
+        clock-frequency = <200000>;
         ret = <0x7b>;
         width = <128>;
         height = <64>;
@@ -44,19 +42,17 @@ oled {
         status = "okay";
     };
 };
-// GPIO0C1
+
 &pinctrl {
-    oled_default: oled-default {
-        /* not set */
-    };
+    // GPIO6A1
     oled_rst_high: oled-rst-high {
-        pins = <0 RK_PC1 GPIO_ACTIVE_HIGH>;
-        slew-rate = <1>;
+        pins = <RK_GPIO6 RK_PA1 RK_FUNC_GPIO &pcfg_pull_up>;
+        // slew-rate = <1>;
         output-high;
     };
     oled_rst_low: oled-rst-low {
-        pins = <0 RK_PC1 GPIO_ACTIVE_LOW>;
-        slew-rate = <1>;
+        pins = <RK_GPIO6 RK_PA1 RK_FUNC_GPIO &pcfg_pull_down>;
+        // slew-rate = <1>;
         output-low;
     };
 }

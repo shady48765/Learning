@@ -1,3 +1,6 @@
+# if signature error
+# CONFIG_MODULE_SIG=n
+
 ifneq ($(KERNELRELEASE),)
 	MODULE_NAME = oled_driver
 	${MODULE_NAME}_module-objs := 	oled_driver.o \
@@ -42,7 +45,6 @@ cleanall :
 	@echo "---> all clean."
 
 clean:
-	@echo "---> clean trash file."
 	rm -rvf .*.?.sw?p .*.?.swp *.o *.*.o .*.cmd .tmp_versions *.mod.c Module.symvers modules.order
 	@echo "---> clean finished."
 
