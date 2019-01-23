@@ -38,7 +38,7 @@
 
 
 #define OLED_DEBUG					 0
-#define HRTIMER_DEFINE               0
+#define HRTIMER_DEFINE               1
 #define I2C_16_BIT_MODE				 0
 
 
@@ -47,7 +47,7 @@
 
 
 #define TAG                         " <OLED> "
-#define USR_MSG_LEVEL               KERN_WARNING
+#define USR_MSG_LEVEL               KERN_ERR
 #define USR_ERR_LEVEL               KERN_ERR
 #define usr_msg(fmt, args...)       printk(USR_MSG_LEVEL TAG " (function : %s), [line : %d] "fmt"\n",__func__, __LINE__, ##args)
 #define err_msg(fmt, args...)       printk(USR_ERR_LEVEL TAG " (function : %s), [line : %d] "fmt"\n",__func__, __LINE__, ##args)
@@ -101,7 +101,7 @@ struct _oled_dts_info {
 extern struct _oled_dts_info * oled_dts_info;
 
 /* oled i2c information struction ---------------------------------------*/
-struct _oled_i2c_info {	
+struct _oled_i2c_info {
 	struct i2c_client 	* oled_client;
 	char 				* data;
     struct mutex        oled_i2c_lock;
@@ -111,10 +111,9 @@ extern struct _oled_i2c_info * oled_i2c_info;
 
 /* oled whole information struction ---------------------------------------*/
 
-/* timer parameters initaliztion -------------------------------------------*/
+
 #if HRTIMER_DEFINE
-    static struct   hrtimer     oled_timer;
-    void oled_timer_init(unsigned long ticks);
+    void oled_timer_init(unsigned long     ticks);
 #endif
 
 #endif

@@ -1,10 +1,9 @@
 /*-------------------- way 1: of get gpio start ------------------------*/
 // 0.91 inch oled 128x64
 &i2c1 {
-    oled: ss1306@7b {
-        compatible = "oled, ssd1306";
-        clock-frequency = <200000>;
-        ret = <0x7b>;
+    oled: ss1306@3c {
+        compatible = "oled,ssd1306";
+        reg = <0x3c>;
         width = <128>;
         height = <64>;
         oled-rst = <&gpio6 RK_PA1 GPIO_ACTIVE_HIGH>;  // GPIO6A1
@@ -31,10 +30,10 @@ oled-rst {
 };
 
 &i2c1 {
-    oled: ss1306@7b {
+    oled: ss1306@3c {
         compatible = "oled, ssd1306";
         clock-frequency = <200000>;
-        ret = <0x7b>;
+        reg = <0x3c>;
         width = <128>;
         height = <64>;
         page-offset = <0>;

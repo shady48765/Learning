@@ -2,36 +2,41 @@
 
 #include "oled_driver.h"
 
+#ifndef CONFIG_OF
+    #define CONFIG_OF
+#endif
 
 #define OLED_DRIVER_VERSION             "0.1"
 
 struct _oled_device_info    * oled_dev_info;
-EXPORT_SYMBOL(oled_dev_info);
 struct _oled_dts_info       * oled_dts_info;
-EXPORT_SYMBOL(oled_dts_info);
 struct _oled_i2c_info       * oled_i2c_info;
-EXPORT_SYMBOL(oled_i2c_info);
+
 
 
 
 /* of_device_id oled_i2c_of_match ---------------------------------------------------*/
-static struct of_device_id oled_i2c_of_match[] = {
-	{.compatible = "oled, ssd1306",},
+static const struct of_device_id oled_i2c_of_match[] = {
+	{.compatible = "oled,ssd1306"},
 	{/* keep this */}
 };
-MODULE_DEVICE_TABLE(of, oled_i2c_of_match);
+
 /* hrt timer start -------------------------------------------------------------------------*/
 #if HRTIMER_DEFINE
 
-static ktime_t  tm_period;
+#define MS_TO_NS(x)         (x * 1000000)      // ms to ns
+
+struct hrtimer oled_timer;
+ktime_t  tm_period;
+
 static enum hrtimer_restart loop_hrtimer_callback(struct hrtimer * arg)
 {
 	static int loop_counter = 0;
-	
+
     ktime_t now = arg->base->get_time();
-    usr_msg("timer running at jiffies=%ld\n", jiffies);
+    usr_msg("timer : jiffies=%ld\n", jiffies);
     hrtimer_forward(arg, now, tm_period);
-	
+
 	if(0 == loop_counter % 2)
 		gpio_set_state(high);
 	else
@@ -45,17 +50,15 @@ static enum hrtimer_restart loop_hrtimer_callback(struct hrtimer * arg)
  * @param ticks microsencod
  */
 
-void oled_timer_init(unsigned long ticks)
+void oled_timer_init(unsigned long     ticks)
 {
-    int retval = 0;
-
     mutex_lock(&oled_dev_info->oled_dev_lock);
     // ktime_set(const s64 secs, const unsigned long nsecs); // param1: second, param2:nanosecond
     tm_period = ktime_set(0, MS_TO_NS(ticks));     // set 1second, 1000 nanosecond.
     hrtimer_init(&oled_timer, CLOCK_REALTIME, HRTIMER_MODE_REL);
     oled_timer.function = loop_hrtimer_callback;
-    mutex_unlock(&oled_dev_info->oled_dev_lock);
     hrtimer_start(&oled_timer, tm_period, HRTIMER_MODE_REL);
+    mutex_unlock(&oled_dev_info->oled_dev_lock);
 }
 #endif
 /* hrt timer end -------------------------------------------------------------------------*/
@@ -67,32 +70,34 @@ static int waitqueue_flag = 1;
 
 static void blink_reacall_function(struct work_struct *work)
 {
-    static int repeat_schedule = 1;
     
+
     usr_msg("---> move in, current waitqueue_flag = %d", waitqueue_flag);
     waitqueue_flag += 1;
     wake_up_interruptible(&blink_waitqueue_head);
     usr_msg("queue has been woke-up, current waitqueue_flag = %d", waitqueue_flag);
     // reschedule 10 times
-    if(1 == repeat_schedule && waitqueue_flag < 3) {
+    if(waitqueue_flag < 3) {
         if(0 == waitqueue_flag % 2)
 			gpio_set_state(high);
         else
 			gpio_set_state(low);
 
-        mdelay(1000);
+        mdelay(300);
 		// oled power on and init
-		oled_power_on();
 		
+
         schedule_work(&blink_work);
     }
    else {
+        oled_power_on();
+        
        // after 10 times schedule_work, program will be suspend
        waitqueue_flag = 0;
        usr_msg("disable wake_up_interruptible, waitqueue_flag = %d", waitqueue_flag);
    }
 }
-EXPORT_SYMBOL(blink_reacall_function);
+
 
 void waitqueue_init(void)
 {
@@ -102,7 +107,7 @@ void waitqueue_init(void)
     wait_event_interruptible(blink_waitqueue_head, waitqueue_flag != 0);
     usr_msg("waitqueue_created, init codition =  %d", waitqueue_flag);
 }
-EXPORT_SYMBOL(waitqueue_init);
+
 
 
 /* i2c fileoperations start -------------------------------------------------------*/
@@ -183,7 +188,7 @@ int oled_i2c_send_byte(struct i2c_client * client, unsigned char addr, unsigned 
     int ret;
 	struct i2c_msg	msg[1];
 	unsigned char 	temp[2] = {addr, data};
-		
+
 	msg[0].addr 	= client->addr,
 	msg[0].flags 	= WRITE_FLAG,
 	msg[0].buf 		= temp,
@@ -199,7 +204,7 @@ int oled_i2c_send_byte(struct i2c_client * client, unsigned char addr, unsigned 
     }
     return ret;
 }
-        
+
 int oled_i2c_send_matrix(struct i2c_client * client, unsigned char addr, unsigned char *data, unsigned int length)
 {
 	int ret;
@@ -209,7 +214,7 @@ int oled_i2c_send_matrix(struct i2c_client * client, unsigned char addr, unsigne
 	// 8-bit address mode
 	tmp[0] = addr;
 	memcpy (tmp + 1, data, length);
-	
+
     msg[0].addr = client->addr;
     msg[0].flags = 0;                    /* Write */
     msg[0].len = length + 1; /* Address is 1 bytes coded */
@@ -239,10 +244,10 @@ static int oled_i2c_probe(struct i2c_client * client, const struct i2c_device_id
 		err_msg("i2c check failed");
 		return -ENODEV;
     }
-	
+
     dev_info(&client->dev, "chip found, driver verison" OLED_DRIVER_VERSION "\n");
 	usr_msg("detected slaver adapter address = 0x%x", client->addr);
-	
+
 	ret = struct_mallock_init();
 	if(ret < 0) {
 		err_msg("error : malloc.");
@@ -255,9 +260,9 @@ static int oled_i2c_probe(struct i2c_client * client, const struct i2c_device_id
 		goto err_get_dts;
 	}
 
-	
+
 	oled_i2c_info->oled_client = client;
-	
+
     mutex_init(&oled_i2c_info->oled_i2c_lock);
 
     // i2c_set_clientdata recall dev_set_drvdata(&dev->dev, data);
@@ -269,15 +274,16 @@ static int oled_i2c_probe(struct i2c_client * client, const struct i2c_device_id
 		err_msg("error : oled driver register.");
 		return ret;
 	}
+    usr_msg("---> waitqueue_init");
 	waitqueue_init();
-	proc_create("oled_i2c_proc_entry", 0666, NULL, &oled_i2c_fops);
+	// proc_create("oled_i2c_proc_entry", 0666, NULL, &oled_i2c_fops);
 
 #if HRTIMER_DEFINE
     // set tick counter
     oled_timer_init(1000);
 #endif
 	// oled_power_on();
-	
+
     return ret;
 
 
@@ -293,11 +299,16 @@ err_get_dts:
 	struct_mallock_free();
 	return ret;
 }
-EXPORT_SYMBOL(oled_i2c_probe);
+
 
 static int oled_i2c_remove(struct i2c_client *client)
 {
+#if HRTIMER_DEFINE
+    int retval;
+#endif
+
     struct _oled_i2c_info *temp = i2c_get_clientdata(client);
+    usr_msg("i2c driver remove");
     kfree(temp->data);
     mutex_destroy(&temp->oled_i2c_lock);
     kfree(temp);
@@ -306,16 +317,24 @@ static int oled_i2c_remove(struct i2c_client *client)
     class_destroy(oled_dev_info->oled_class);
     cdev_del(&oled_dev_info->oled_cdev);
     unregister_chrdev(oled_dev_info->oled_major, OLED_DEV_NAME);
+    struct_mallock_free();
+    
+#if HRTIMER_DEFINE
+    retval = hrtimer_cancel(&oled_timer);
+    if (retval)
+        err_msg("The timer is still in use...\n");
+    usr_msg("timer_jiffy exit success");
+#endif
     return 0;
 }
-EXPORT_SYMBOL(oled_i2c_remove);
+
 
 
 int oled_get_i2c_dts_info(struct device *oled_dev)
 {
 
 	int ret, index;
-	
+
 	// get dts information
 #if 0
 	if(!oled_node) {
@@ -324,7 +343,7 @@ int oled_get_i2c_dts_info(struct device *oled_dev)
 	}
 #endif
 
-	// oled_dts_info->node = of_find_matching_node(NULL, oled_i2c_of_match);
+    // oled_dts_info->node = of_find_matching_node(NULL, oled_i2c_of_match);
 	oled_dts_info->node = oled_dev->of_node;
 	if(!oled_dts_info->node) {
 		err_msg("error : cannot find oled_i2c_of_match");
@@ -369,7 +388,7 @@ int oled_get_i2c_dts_info(struct device *oled_dev)
 dts_out:
 	return ret;
 }
-EXPORT_SYMBOL(oled_get_i2c_dts_info);
+
 
 
 int struct_mallock_init(void)
@@ -396,7 +415,7 @@ int struct_mallock_init(void)
 		goto err_oled_i2c_info;
 	}
     mutex_init(&oled_dev_info->oled_dev_lock);
-    
+
 	return ret;
 
 err_oled_i2c_info:
@@ -407,7 +426,7 @@ err_oled_dev_info:
 	return ret;
 
 }
-EXPORT_SYMBOL(struct_mallock_init);
+
 
 void struct_mallock_free(void)
 {
@@ -415,7 +434,7 @@ void struct_mallock_free(void)
 	kfree(oled_dts_info);
 	kfree(oled_i2c_info);
 }
-EXPORT_SYMBOL(struct_mallock_free);
+
 
 int register_oled_driver(void)
 {
@@ -467,7 +486,7 @@ err_cdev_add:
 out:
 	return ret;
 }
-EXPORT_SYMBOL(register_oled_driver);
+
 
 
 void gpio_set_state(status state)
@@ -475,25 +494,47 @@ void gpio_set_state(status state)
     mutex_lock(&oled_dev_info->oled_dev_lock);
     if(low == state) {
         gpio_set_value(oled_dts_info->oled_rst_pin, 0);
-        
+
     } else {
         gpio_set_value(oled_dts_info->oled_rst_pin, 1);
     }
     mutex_unlock(&oled_dev_info->oled_dev_lock);
 }
-EXPORT_SYMBOL(gpio_set_state);
+
+static const struct i2c_device_id oled_device_id[] = {{"oled,ssd1306", 0}, {}};
+
 
 static struct i2c_driver oled_i2c_driver = {
     .driver = {
         .owner = THIS_MODULE,
         .name = OLED_DEV_NAME,
-        .of_match_table = of_match_ptr(oled_i2c_of_match),
+        .of_match_table = oled_i2c_of_match,
     },
     .probe = oled_i2c_probe,
     .remove = oled_i2c_remove,
+    .id_table = oled_device_id,
 };
 
-module_i2c_driver(oled_i2c_driver);
+// module_i2c_driver(oled_i2c_driver);
+
+
+static int __init oled_driver_init(void)
+{
+    usr_msg("---> move in");
+    i2c_add_driver(&oled_i2c_driver);
+    return 0;
+}
+
+static void __exit oled_driver_exit(void)
+{
+    usr_msg("move int");
+    i2c_del_driver(&oled_i2c_driver);
+}
+
+
+module_init(oled_driver_init);
+module_exit(oled_driver_exit);
+
 
 MODULE_LICENSE("GPL");
 MODULE_AUTHOR("quan, <shusheng1991@gmail.com>");

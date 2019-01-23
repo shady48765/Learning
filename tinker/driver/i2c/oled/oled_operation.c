@@ -17,27 +17,31 @@ void oled_mark_dot(unsigned char x, unsigned y)
     }
     oled_write_data_cmd(1, DATA_MODE);
 }
-EXPORT_SYMBOL(oled_mark_dot);
 
 void oled_write_horizontal_line(unsigned char line_index , unsigned char start, unsigned char end)
 {
-    
+
 }
-EXPORT_SYMBOL(oled_write_horizontal_line);
 
 
 void oled_write_vertical_line(unsigned char vertical_index , unsigned char start, unsigned char end)
 {
-    
-}
-EXPORT_SYMBOL(oled_write_vertical_line);
 
-void oled_power_on(void) 
+}
+
+void oled_power_on(void)
 {
+    int loop, index;
 	oled_init();
 	oled_clean();
+    for (loop = 0; loop < 8; loop++) {
+        oled_write_data_cmd(0xb0 + loop, CMD_MODE); //设置页地址（0~7）
+        oled_write_data_cmd(0x00, CMD_MODE); //设置显示位置—列低地址
+        oled_write_data_cmd(0x10, CMD_MODE); //设置显示位置—列高地址
+        for (index = 1; index < 128; index++)
+        oled_write_data_cmd(0, DATA_MODE);
+    }
 }
-EXPORT_SYMBOL(oled_power_on);
 
 void oled_init(void)
 {
@@ -79,7 +83,6 @@ void oled_init(void)
      oled_write_data_cmd(0XAF, CMD_MODE);
      oled_clean();
 }
-EXPORT_SYMBOL(oled_init);
 
 void oled_clean(void)
 {
@@ -92,7 +95,6 @@ void oled_clean(void)
             oled_write_data_cmd(0, DATA_MODE);
     }
 }
-EXPORT_SYMBOL(oled_clean);
 
 
 void oled_write_data_cmd(unsigned char data, unsigned char data_cmd_flags)
@@ -103,7 +105,3 @@ void oled_write_data_cmd(unsigned char data, unsigned char data_cmd_flags)
         oled_i2c_send_byte(oled_i2c_info->oled_client, SSD1306_CMD_ADDR, data);
     }
 }
-EXPORT_SYMBOL(oled_write_data_cmd);
-
-
-MODULE_LICENSE("GPL");
