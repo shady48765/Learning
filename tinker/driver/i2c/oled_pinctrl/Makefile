@@ -1,7 +1,10 @@
+# if signature error
+# CONFIG_MODULE_SIG=n
+
 ifneq ($(KERNELRELEASE),)
-	MODULE_NAME = oled_driver
-	${MODULE_NAME}_module-objs := 	oled_driver.o \
-									oled_operation.o
+	MODULE_NAME = oled_pinctrl_driver
+	${MODULE_NAME}_module-objs := 	oled_pinctrl_driver.o \
+									oled_pinctrl_operation.o
 	obj-m := ${MODULE_NAME}_module.o
 
 else
@@ -9,7 +12,7 @@ else
 # get system verison
 KVERS = $(shell uname -r)
 # module install name
-MODULE_NAME = oled_driver
+MODULE_NAME = oled_pinctrl_driver
 
 # module test app name
 APP_NAME = app_${MODULE_NAME}
@@ -42,7 +45,6 @@ cleanall :
 	@echo "---> all clean."
 
 clean:
-	@echo "---> clean trash file."
 	rm -rvf .*.?.sw?p .*.?.swp *.o *.*.o .*.cmd .tmp_versions *.mod.c Module.symvers modules.order
 	@echo "---> clean finished."
 

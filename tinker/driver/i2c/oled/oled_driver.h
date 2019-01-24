@@ -49,11 +49,11 @@
 #define TAG                         " <OLED> "
 #define USR_MSG_LEVEL               KERN_ERR
 #define USR_ERR_LEVEL               KERN_ERR
-#define usr_msg(fmt, args...)       printk(USR_MSG_LEVEL TAG " (function : %s), [line : %d] "fmt"\n",__func__, __LINE__, ##args)
+#define usr_msg(fmt, args...)       printk(USR_MSG_LEVEL TAG ""fmt"\n", ##args)
 #define err_msg(fmt, args...)       printk(USR_ERR_LEVEL TAG " (function : %s), [line : %d] "fmt"\n",__func__, __LINE__, ##args)
 
 
-#define    OLED_DEV_NAME         "OLED_SSD1306"
+#define    OLED_DEV_NAME         "oled_ssd1306"
 
 
 typedef enum {

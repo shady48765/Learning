@@ -1,3 +1,6 @@
+# if signature error
+# CONFIG_MODULE_SIG=n
+
 ifneq ($(KERNELRELEASE),)
 	MODULE_NAME = oled_driver
 	${MODULE_NAME}_module-objs := 	oled_driver.o \

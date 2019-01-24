@@ -14,7 +14,7 @@ void oled_write_vertical_line(unsigned char vertical_index, unsigned char start,
 void oled_power_on(void);
 void oled_clean(void);
 void oled_init(void);
-void oled_write_data_cmd(unsigned char data_cmd_flags, unsigned char data);
+void oled_write_data_cmd(unsigned char data, unsigned char data_cmd_flags);
 
 
 #endif
