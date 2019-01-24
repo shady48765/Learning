@@ -68,7 +68,7 @@ static int waitqueue_flag = 1;
 
 static void blink_reacall_function(struct work_struct *work)
 {
-    
+
     wake_up_interruptible(&blink_waitqueue_head);
     usr_msg("queue woke-up, waitqueue_flag = %d", waitqueue_flag);
     // reschedule 10 times
@@ -82,7 +82,7 @@ static void blink_reacall_function(struct work_struct *work)
         schedule_work(&blink_work);
     } else {
         // oled power on and init
-        oled_power_on();
+
        // after 10 times schedule_work, program will be suspend
        waitqueue_flag = 0;
        usr_msg("disable wake_up_interruptible, waitqueue_flag = %d", waitqueue_flag);
@@ -99,19 +99,19 @@ void waitqueue_init(void)
 }
 
 /* i2c fileoperations start -------------------------------------------------------*/
-static int oled_i2c_open (struct inode *inode, struct file *filp)
+static int oled_i2c_open(struct inode *inode, struct file *filp)
 {
     usr_msg("oled proc : oled_i2c_open");
     return 0;
 }
 
-static ssize_t oled_i2c_read (struct file *flip, char __user *buff,
+static ssize_t oled_i2c_read(struct file *flip, char __user *buff,
                             size_t counter, loff_t *fops)
 {
     usr_msg("oled proc : oled_i2c_read");
     return 0;
 }
-static ssize_t oled_i2c_write (struct file *flip, const char __user *buff,
+static ssize_t oled_i2c_write(struct file *flip, const char __user *buff,
                                     size_t counter, loff_t *fops)
 {
     int value;
@@ -151,18 +151,19 @@ static ssize_t oled_i2c_write (struct file *flip, const char __user *buff,
 
     return 0;
 }
-static int oled_i2c_release (struct inode *inode, struct file *filp)
+static int oled_i2c_release(struct inode *inode, struct file *filp)
 {
     usr_msg("oled proc : oled_i2c_release");
     return 0;
 }
-static long oled_i2c_ioctl (struct file *flip, unsigned int cmd,
+static long oled_i2c_ioctl(struct file *flip, unsigned int cmd,
                             unsigned long param)
 {
     usr_msg("oled proc : oled_i2c_ioctl");
     return 0;
 }
 /* i2c fileoperations end -------------------------------------------------------*/
+
 /* i2c transmit function start -------------------------------------------------------*/
 /**
  * [oled_i2c_send_byte description, 8bit mode]
@@ -171,36 +172,38 @@ static long oled_i2c_ioctl (struct file *flip, unsigned int cmd,
  * @return      [description]
  */
 
-int oled_i2c_send_byte(struct i2c_client * client, unsigned char addr, unsigned char data)
+int oled_i2c_send_byte(struct i2c_client *client, unsigned char sub_addr, unsigned char data)
 {
-    int ret;
-	struct i2c_msg	msg[1];
-	unsigned char 	temp[2] = {addr, data};
+    int ret, index;
+    struct i2c_msg	msg[1];
+    unsigned char 	temp[2] = {sub_addr, data};
+    for(index = 0; index <= strlen(temp); index++)
+        usr_msg("---> i2c send sub_addr = 0x%x, data = 0x%x", sub_addr, temp[index]);
 
-	msg[0].addr 	= client->addr,
-	msg[0].flags 	= WRITE_FLAG,
-	msg[0].buf 		= temp,
-	msg[0].len		= 2,		// write = sub-address + data
-
-    // return sent message count
+    usr_msg("---> strlen send length = %d", strlen(temp));
+    usr_msg("---> siezof send length = %d", sizeof(temp)/sizeof(unsigned char));
+    usr_msg("---> i2c flags = 0x%x, client->addr = 0x%x", client->flags, client->addr);
+	msg[0].addr 	= client->addr;
+	msg[0].flags 	= client->flags & I2C_M_TEN;
+	msg[0].buf 	    = temp;
+	msg[0].len		= 2;		// write = sub-address + data
     mutex_lock(&oled_i2c_info->oled_i2c_lock);
+    // return sent message count
     ret = i2c_transfer(client->adapter, msg, 1);
-	mutex_unlock(&oled_i2c_info->oled_i2c_lock);
-	if (ret < 0) {
-        err_msg("error : i2c_transfer failed\n");
-		ret = -ENOMSG;
-    }
-    return ret;
+    mutex_unlock(&oled_i2c_info->oled_i2c_lock);
+    memset(temp, 0, sizeof(temp));
+    return ((ret > 0) ? ret : -ENOMSG);
+
 }
 
-int oled_i2c_send_matrix(struct i2c_client * client, unsigned char addr, unsigned char *data, unsigned int length)
+int oled_i2c_send_matrix(struct i2c_client * client, unsigned char sub_addr, unsigned char *data, unsigned int length)
 {
 	int ret;
     unsigned char tmp[length + 1];
     struct i2c_msg msg[1];
 
 	// 8-bit address mode
-	tmp[0] = addr;
+	tmp[0] = sub_addr;
 	memcpy (tmp + 1, data, length);
 
     msg[0].addr = client->addr;
@@ -210,7 +213,7 @@ int oled_i2c_send_matrix(struct i2c_client * client, unsigned char addr, unsigne
 
     ret = i2c_transfer(client->adapter , msg, 1);
 
-	return (ret > 0) ? ret : -ENOMSG;
+	return ((ret > 0) ? ret : -ENOMSG);
 }
 /* i2c transmit function end ----------------------------------------------------------*/
 
@@ -259,11 +262,11 @@ static int oled_i2c_probe(struct i2c_client * client, const struct i2c_device_id
 	}
     usr_msg("---> waitqueue_init");
 	waitqueue_init();
-	// proc_create("oled_i2c_proc_entry", 0666, NULL, &oled_i2c_fops);
+	oled_power_on();
 
 #if HRTIMER_DEFINE
     // set tick counter
-    oled_timer_init(1000);
+    oled_timer_init(2000);
 #endif
     return ret;
 
@@ -277,26 +280,21 @@ static int oled_i2c_remove(struct i2c_client *client)
 {
 #if HRTIMER_DEFINE
     int retval;
+    retval = hrtimer_cancel(&oled_timer);
+    if (retval)
+        err_msg("The timer is still in use...\n");
+    usr_msg("timer_jiffy exit success");
 #endif
-
-    struct _oled_i2c_info *temp = i2c_get_clientdata(client);
     usr_msg("i2c driver remove");
-    kfree(temp->data);
-    mutex_destroy(&temp->oled_i2c_lock);
-    kfree(temp);
+    mutex_destroy(&oled_i2c_info->oled_i2c_lock);
     gpio_free(oled_dts_info->oled_rst_pin);
     device_destroy(oled_dev_info->oled_class, oled_dev_info->oled_devno);
     class_destroy(oled_dev_info->oled_class);
     cdev_del(&oled_dev_info->oled_cdev);
     unregister_chrdev(oled_dev_info->oled_major, OLED_DEV_NAME);
     struct_mallock_free();
-    
-#if HRTIMER_DEFINE
-    retval = hrtimer_cancel(&oled_timer);
-    if (retval)
-        err_msg("The timer is still in use...\n");
-    usr_msg("timer_jiffy exit success");
-#endif
+
+
     return 0;
 }
 
@@ -325,8 +323,6 @@ int oled_get_i2c_dts_info(struct device *oled_dev)
 	usr_msg("---> width = %d", oled_dts_info->oled_width);
 	of_property_read_u32(oled_dts_info->node, "height", &oled_dts_info->oled_height);
 	usr_msg("---> height = %d", oled_dts_info->oled_height);
-	of_property_read_u32(oled_dts_info->node, "clock-frequency", &oled_dts_info->oled_i2c_clk);
-	usr_msg("---> oled_i2c_clk = %d", oled_dts_info->oled_i2c_clk);
 
 	oled_dts_info->oled_rst_pin = of_get_named_gpio(oled_dts_info->node, "oled-rst", 0);
 	if (!gpio_is_valid(oled_dts_info->oled_rst_pin)) {
@@ -470,7 +466,7 @@ void gpio_set_state(status state)
 }
 
 static const struct i2c_device_id oled_device_id[] = {
-    {"oled,ssd1306", 0}, 
+    {"oled,ssd1306", 0},
     {/*keep this*/}
 };
 MODULE_DEVICE_TABLE(i2c, oled_device_id);

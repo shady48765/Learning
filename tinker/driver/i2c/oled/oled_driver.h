@@ -42,8 +42,8 @@
 #define I2C_16_BIT_MODE				 0
 
 
-#define READ_FLAG			0x0001
-#define WRITE_FLAG			0x0000
+#define READ_FLAG			1
+#define WRITE_FLAG			0
 
 
 #define TAG                         " <OLED> "
@@ -68,8 +68,8 @@ void struct_mallock_free(void);
 int oled_get_i2c_dts_info(struct device *oled_dev);
 int register_oled_driver(void);
 
-int oled_i2c_send_byte(struct i2c_client * client, unsigned char addr, unsigned char data);
-int oled_i2c_send_matrix(struct i2c_client * client, unsigned char addr, unsigned char *data, unsigned int length);
+int oled_i2c_send_byte(struct i2c_client *client, unsigned char sub_addr, unsigned char data);
+int oled_i2c_send_matrix(struct i2c_client *client, unsigned char sub_addr, unsigned char *data, unsigned int length);
 void waitqueue_init(void);
 
 /* extern function declartion ------------------------------------------------*/
@@ -85,7 +85,7 @@ struct _oled_device_info {
     struct mutex    oled_dev_lock;
 };
 extern struct _oled_device_info * oled_dev_info;
-
+// EXPORT_SYMBOL(oled_dev_info);
 /* oled dts information struction ---------------------------------------*/
 struct _oled_dts_info {
 	struct device_node 	       	*node;
@@ -99,7 +99,7 @@ struct _oled_dts_info {
 	struct pinctrl_state 		*rst_low;
 };
 extern struct _oled_dts_info * oled_dts_info;
-
+// EXPORT_SYMBOL(oled_dts_info);
 /* oled i2c information struction ---------------------------------------*/
 struct _oled_i2c_info {
 	struct i2c_client 	* oled_client;
@@ -107,8 +107,9 @@ struct _oled_i2c_info {
     struct mutex        oled_i2c_lock;
     struct i2c_msg		oled_i2c_msg;
 };
-extern struct _oled_i2c_info * oled_i2c_info;
 
+extern struct _oled_i2c_info * oled_i2c_info;
+// EXPORT_SYMBOL(oled_i2c_info);
 /* oled whole information struction ---------------------------------------*/
 
 

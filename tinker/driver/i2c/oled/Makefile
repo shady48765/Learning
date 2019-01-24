@@ -21,9 +21,9 @@ CROSS_COMPILE = arm-linux-gnueabihf-
 CC = $(CROSS_COMPILE)gcc
 
 # for aliyun server
-KERNEL_DIR = /arm/tinker/debian_kernel
+# KERNEL_DIR = /arm/tinker/debian_kernel
 # for home virtual ubuntu 18.04
-# KERNEL_DIR = /home/quan/tinker/debian_kernel
+KERNEL_DIR = /home/quan/tinker/debian_kernel
 
 # get driver floder path
 CUR_DIR = $(shell pwd)
