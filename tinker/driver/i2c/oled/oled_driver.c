@@ -81,8 +81,6 @@ static void blink_reacall_function(struct work_struct *work)
         waitqueue_flag += 1;
         schedule_work(&blink_work);
     } else {
-        // oled power on and init
-
        // after 10 times schedule_work, program will be suspend
        waitqueue_flag = 0;
        usr_msg("disable wake_up_interruptible, waitqueue_flag = %d", waitqueue_flag);
@@ -184,9 +182,10 @@ int oled_i2c_send_byte(struct i2c_client *client, unsigned char sub_addr, unsign
     usr_msg("---> siezof send length = %d", sizeof(temp)/sizeof(unsigned char));
     usr_msg("---> i2c flags = 0x%x, client->addr = 0x%x", client->flags, client->addr);
 	msg[0].addr 	= client->addr;
+    msg[0].len		= 2;		// write = sub-address + data
 	msg[0].flags 	= client->flags & I2C_M_TEN;
 	msg[0].buf 	    = temp;
-	msg[0].len		= 2;		// write = sub-address + data
+
     mutex_lock(&oled_i2c_info->oled_i2c_lock);
     // return sent message count
     ret = i2c_transfer(client->adapter, msg, 1);
@@ -262,12 +261,11 @@ static int oled_i2c_probe(struct i2c_client * client, const struct i2c_device_id
 	}
     usr_msg("---> waitqueue_init");
 	waitqueue_init();
-	oled_power_on();
-
 #if HRTIMER_DEFINE
     // set tick counter
     oled_timer_init(2000);
 #endif
+    oled_power_on();
     return ret;
 
 err_get_dts:
