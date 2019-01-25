@@ -18,7 +18,7 @@
 /*-------------- workqueue start -------------------------------------------*/
 
 #if FOO_WORKQUEUE
-// #define DECLARE_WORK(n, f)						        \
+// #define DECLARE_WORK(n, f)			\
 //          struct work_struct n = __WORK_INITIALIZER(n, f)
 
 static struct work_struct           foo_work;
@@ -36,17 +36,14 @@ static void foo_workqueue_recall(struct work_struct *work)
         msleep(1000);
         schedule_work(&foo_work);
     } else {
-        
-        schedule();
-        // will not approach here
-        usr_msg("workqueue scheduled");
+        schedule();                         // give up cpu using authority
+        usr_msg("workqueue scheduled");     // will approach here once
     }
 }
-
 int foo_workqueue_init(void)
 {
     INIT_WORK(&foo_work, foo_workqueue_recall);
-    schedule_work(&foo_work);   // or queue_work(system_wq, work);
+    schedule_work(&foo_work);               // or queue_work(system_wq, work);
     usr_msg("workqueue init success");
 }
 
@@ -83,14 +80,14 @@ void foo_tasklet_recall(unsigned long data)
     // reschedule 10 times
     if(1 == foo_tasklet_repeat_schedule && counter < 10) {
         msleep(1000);
+        //mdelay(1000);
         tasklet_schedule(&foo_tasklet);
     }
 }
 
 void foo_tasklet_init(void)
 {
-    // start schedule tasklet
-    tasklet_schedule(&foo_tasklet);
+    tasklet_schedule(&foo_tasklet);     // start schedule tasklet
     usr_msg("tasklet_scheduled");
 }
 void foo_tasklet_exit(void)

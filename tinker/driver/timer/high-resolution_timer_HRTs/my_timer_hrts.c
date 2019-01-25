@@ -20,12 +20,8 @@ static ktime_t  tm_period;
 
 static enum hrtimer_restart foo_hrtimer_callback(struct hrtimer * arg)
 {
-    struct timeval tm_val;
-    static int loop_counter = 0;
-
     ktime_t now = arg->base->get_time();
     usr_msg("timer running at jiffies=%ld\n", jiffies);
-
     hrtimer_forward(arg, now, tm_period);
     return HRTIMER_RESTART;
 }
@@ -33,22 +29,22 @@ static enum hrtimer_restart foo_hrtimer_callback(struct hrtimer * arg)
 int foo_timer_init(void)
 {
     int retval = 0;
-    
+
     mutex_lock(&foo_mutex);
     // ktime_set(const s64 secs, const unsigned long nsecs); // param1: second, param2:nanosecond
-    tm_period = ktime_set(0, MS_TO_NS(500));     // set 1second, 1000 nanosecond.
+    tm_period = ktime_set(0, MS_TO_NS(1000));     // set 1second, 1000 nanosecond.
     hrtimer_init(&foo_timer, CLOCK_REALTIME, HRTIMER_MODE_REL);
     foo_timer.function = foo_hrtimer_callback;
     hrtimer_start(&foo_timer, tm_period, HRTIMER_MODE_REL);
-    mutex_unlock(&foo_mutex);  
-    
+    mutex_unlock(&foo_mutex);
+
 
     return retval;
 }
 
 static int timer_open(struct inode *inode, struct file *filp)
 {
-    usr_msg( "open"); 
+    usr_msg( "open");
     return 0;
 }
 
@@ -65,7 +61,7 @@ static ssize_t timer_write(struct file *flip, const char __user *buff,
     return 0;
 }
 
-static ssize_t timer_read (struct file *flip, char __user *buff, 
+static ssize_t timer_read (struct file *flip, char __user *buff,
                             size_t counter, loff_t *fops)
 {
     usr_msg( "read");
@@ -83,7 +79,7 @@ static int __init timer_jiffy_init(void)
     int ret;
     mutex_init(&foo_mutex);
     usr_msg("timer_jiffy start");
-    
+
     foo_dev_info = kmalloc(sizeof(struct my_cdev), GFP_KERNEL);
     if(!foo_dev_info) {
         err_msg("kzmalloc error");
@@ -91,7 +87,7 @@ static int __init timer_jiffy_init(void)
         return ret;
     }
     memset(foo_dev_info, 0, sizeof(struct my_cdev));
-    
+
     ret = alloc_chrdev_region(&foo_dev_info->foo_dev_number, 0, 1, FOO_DEV_NAME);
     if(ret < 0) {
         err_msg("alloc_chrdev_region error");
@@ -101,11 +97,11 @@ static int __init timer_jiffy_init(void)
     foo_dev_info->foo_major_number = MAJOR(foo_dev_info->foo_dev_number);
     usr_msg("timer_jiffy, device_numver = %d", foo_dev_info->foo_major_number);
 
-    // foo_cdev cannot init when it's a point, 
+    // foo_cdev cannot init when it's a point,
     // cdev_init(&foo_dev_info->foo_cdev...) cannot succese init
     cdev_init(&foo_dev_info->foo_cdev, &foo_fops);
     foo_dev_info->foo_cdev.owner = THIS_MODULE;
-    
+
     ret = cdev_add(&foo_dev_info->foo_cdev, foo_dev_info->foo_dev_number, 1);
     if(ret < 0) {
         err_msg("cdev_add error");
@@ -115,11 +111,11 @@ static int __init timer_jiffy_init(void)
     ret = foo_device_create();
     if(ret < 0)
         goto err_foo_device_create;
-    
+
     usr_msg("timer_jiffy create success");
-    
-    
-    
+
+
+
     // timer, if only init, can only run once foo_timer_callback
     // every timer run foo_timer_callback, timer need to bu update!
     ret = foo_timer_init();
@@ -127,7 +123,7 @@ static int __init timer_jiffy_init(void)
         err_msg("timer init failed");
     }
     usr_msg("timer init succeed, current jiffies = %ld", jiffies);
-    
+
     return ret;
 
 err_foo_device_create:
@@ -156,19 +152,19 @@ int foo_device_create(void)
     }
     usr_msg("timer_jiffy device create success");
     return 0;
-    
+
 err_device_create:
     class_destroy(foo_dev_info->foo_class);
 err_class_create:
     return ret;
 
-    
+
 }
 
 static void __exit timer_jiffy_exit(void)
 {
     int retval;
-    
+
     device_destroy(foo_dev_info->foo_class, foo_dev_info->foo_dev_number);
     class_destroy(foo_dev_info->foo_class);
     cdev_del(&foo_dev_info->foo_cdev);

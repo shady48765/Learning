@@ -10,7 +10,7 @@ KVERS = $(shell uname -r)
 MODULE_NAME = gpio_pinctrl
 
 # module test app name
-APP_NAME = app_gpio_pinctrl
+APP_NAME = app_${MODULE_NAME}
 
 CROSS_COMPILE = arm-linux-gnueabihf-
 CC = $(CROSS_COMPILE)gcc
@@ -34,14 +34,14 @@ app :
 	$(CC) $(APP_NAME).c -o $(APP_NAME)
 	@echo "---> app build finished."
 
-clean :
+clean_all :
 	make -C $(KERNEL_DIR) M=$(CUR_DIR) clean
 	rm -rf $(APP_NAME)
 	rm -rf .*.?.sw?p
 	rm -rf .*.?.swp
 	@echo "---> clean trash finished."
 
-temp_clean:
+clean:
 	@echo "---> clean swap file."
 	rm -rf .*.?.sw?p
 	rm -rf .*.?.swp

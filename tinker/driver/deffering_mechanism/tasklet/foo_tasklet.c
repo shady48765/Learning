@@ -33,7 +33,8 @@ void foo_tasklet_recall(unsigned long data)
     
     // reschedule 10 times
     if(1 == foo_tasklet_repeat_schedule && counter < 10) {
-        msleep(1000);
+        // msleep(1000);
+        mdelay(1000);
         tasklet_schedule(&foo_tasklet);
     }
 }
