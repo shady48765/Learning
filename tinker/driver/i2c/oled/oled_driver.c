@@ -82,8 +82,9 @@ static void blink_reacall_function(struct work_struct *work)
         schedule_work(&blink_work);
     } else {
        // after 10 times schedule_work, program will be suspend
-       waitqueue_flag = 0;
-       usr_msg("disable wake_up_interruptible, waitqueue_flag = %d", waitqueue_flag);
+        oled_power_on();
+        waitqueue_flag = 0;
+        usr_msg("disable wake_up_interruptible, waitqueue_flag = %d", waitqueue_flag);
    }
 }
 
@@ -169,37 +170,85 @@ static long oled_i2c_ioctl(struct file *flip, unsigned int cmd,
  * @param  data :write data
  * @return      [description]
  */
-
+#if 0
 int oled_i2c_send_byte(struct i2c_client *client, unsigned char sub_addr, unsigned char data)
 {
     int ret, index;
-    struct i2c_msg	msg[1];
-    unsigned char 	temp[2] = {sub_addr, data};
+    struct i2c_msg	msg;
+    // unsigned char 	temp[2] = {sub_addr, data};
+    unsigned char temp[2] = {0};
+    temp[0] = sub_addr;
+    temp[1] = data;
+    
     for(index = 0; index <= strlen(temp); index++)
         usr_msg("---> i2c send sub_addr = 0x%x, data = 0x%x", sub_addr, temp[index]);
 
     usr_msg("---> strlen send length = %d", strlen(temp));
-    usr_msg("---> siezof send length = %d", sizeof(temp)/sizeof(unsigned char));
+    usr_msg("---> siezof send length = %d", sizeof(temp)/sizeof(temp[0]));
     usr_msg("---> i2c flags = 0x%x, client->addr = 0x%x", client->flags, client->addr);
-	msg[0].addr 	= client->addr;
-    msg[0].len		= 2;		// write = sub-address + data
-	msg[0].flags 	= client->flags & I2C_M_TEN;
-	msg[0].buf 	    = temp;
+
+	msg.addr 	= client->addr;
+    msg.len		= 2;		// write = sub-address + data
+	msg.flags 	= WRITE_FLAG;
+	msg.buf 	= temp;
 
     mutex_lock(&oled_i2c_info->oled_i2c_lock);
     // return sent message count
-    ret = i2c_transfer(client->adapter, msg, 1);
+    ret = i2c_transfer(client->adapter, &msg, 1);
     mutex_unlock(&oled_i2c_info->oled_i2c_lock);
     memset(temp, 0, sizeof(temp));
     return ((ret > 0) ? ret : -ENOMSG);
-
 }
+#else
+int oled_i2c_send_byte(struct i2c_client *client, unsigned char sub_addr, unsigned char data)
+{
+	int ret;
+	unsigned char * buff = kmalloc(sizeof(char) * 2, GFP_KERNEL);
+	buff[0] = sub_addr;
+	buff[1] = data;
+	usr_msg("---> i2c send sub_addr = 0x%x, buff_size = %d", sub_addr, ARRAY_SIZE(buff));
+	ret = i2c_master_send(client, buff, ARRAY_SIZE(buff));
+
+
+
+#if 0
+    int ret, index;
+    struct i2c_msg	msg;
+    // unsigned char 	temp[2] = {sub_addr, data};
+    unsigned char temp[3] = {0};
+    temp[0] = sub_addr >> 8;
+    temp[1] = sub_addr & 0xff;
+    temp[2] = data;
+    
+    for(index = 0; index <= strlen(temp); index++)
+        usr_msg("---> i2c send sub_addr = 0x%x, data = 0x%x", sub_addr, temp[index]);
+
+    usr_msg("---> strlen send length = %d", strlen(temp));
+    usr_msg("---> siezof send length = %d", sizeof(temp)/sizeof(temp[0]));
+    usr_msg("---> i2c flags = 0x%x, client->addr = 0x%x", client->flags, client->addr);
+
+	msg.addr 	= client->addr;
+    msg.len		= 3;		// write = sub-address + data
+	msg.flags 	= WRITE_FLAG;
+	msg.buf 	= temp;
+
+    mutex_lock(&oled_i2c_info->oled_i2c_lock);
+    // return sent message count
+    ret = i2c_transfer(client->adapter, &msg, 1);
+    mutex_unlock(&oled_i2c_info->oled_i2c_lock);
+    memset(temp, 0, sizeof(temp));
+    return ((ret > 0) ? ret : -ENOMSG);
+#endif
+}
+#endif
+
+
 
 int oled_i2c_send_matrix(struct i2c_client * client, unsigned char sub_addr, unsigned char *data, unsigned int length)
 {
 	int ret;
-    unsigned char tmp[length + 1];
-    struct i2c_msg msg[1];
+    unsigned char   tmp[length + 1];
+    struct i2c_msg  msg[1];
 
 	// 8-bit address mode
 	tmp[0] = sub_addr;
@@ -209,9 +258,9 @@ int oled_i2c_send_matrix(struct i2c_client * client, unsigned char sub_addr, uns
     msg[0].flags = 0;                    /* Write */
     msg[0].len = length + 1; /* Address is 1 bytes coded */
     msg[0].buf = tmp;
-
-    ret = i2c_transfer(client->adapter , msg, 1);
-
+    mutex_lock(&oled_i2c_info->oled_i2c_lock);
+    ret = i2c_transfer(client->adapter , msg, ARRAY_SIZE(msg));
+    mutex_unlock(&oled_i2c_info->oled_i2c_lock);
 	return ((ret > 0) ? ret : -ENOMSG);
 }
 /* i2c transmit function end ----------------------------------------------------------*/
@@ -226,15 +275,16 @@ static struct file_operations oled_i2c_fops = {
 
 static int oled_i2c_probe(struct i2c_client * client, const struct i2c_device_id *i2c_id)
 {
-    int ret = 0;
+    int ret;
 
-#if 0
+#if I2C_CHECK_SELF
     usr_msg("---> move in");
     if(!i2c_check_functionality(client->adapter, I2C_FUNC_I2C)) {
 		err_msg("i2c check failed");
 		return -ENODEV;
     }
 #endif
+
 	usr_msg("detected slaver adapter address = 0x%x", client->addr);
     usr_msg("detected slaver adapter (address << 1) = 0x%x", (client->addr << 1));
 
@@ -265,7 +315,7 @@ static int oled_i2c_probe(struct i2c_client * client, const struct i2c_device_id
     // set tick counter
     oled_timer_init(2000);
 #endif
-    oled_power_on();
+
     return ret;
 
 err_get_dts:

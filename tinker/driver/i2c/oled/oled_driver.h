@@ -40,7 +40,7 @@
 #define OLED_DEBUG					 0
 #define HRTIMER_DEFINE               1
 #define I2C_16_BIT_MODE				 0
-
+#define I2C_CHECK_SELF               1
 
 #define READ_FLAG			1
 #define WRITE_FLAG			0

@@ -97,53 +97,6 @@ void oled_init(void)
     oled_write_cmd(0X14); //
     oled_write_cmd(0XAF); //--turn on oled panel
 #endif
-    //     // Init OLED
-    //     oled_write_cmd(0xAE); //display off
-    //     oled_write_cmd(0x20); //Set Memory Addressing Mode
-    //     oled_write_cmd(0x10); // 00,Horizontal Addressing Mode; 01,Vertical Addressing Mode;
-    //                                 // 10,Page Addressing Mode (RESET); 11,Invalid
-    //     oled_write_cmd(0xB0); //Set Page Start Address for Page Addressing Mode,0-7
-
-    // #ifdef SSD1306_MIRROR_VERT
-    //     oled_write_cmd(0xC0); // Mirror vertically
-    // #else
-    //     oled_write_cmd(0xC8); //Set COM Output Scan Direction
-    // #endif
-    //     oled_write_cmd(0x00); //---set low column address
-    //     oled_write_cmd(0x10); //---set high column address
-
-    //     oled_write_cmd(0x40); //--set start line address - CHECK
-
-    //     oled_write_cmd(0x81); //--set contrast control register - CHECK
-    //     oled_write_cmd(0xFF);
-
-    // #ifdef SSD1306_MIRROR_HORIZ
-    //     oled_write_cmd(0xA0); // Mirror horizontally
-    // #else
-    //     oled_write_cmd(0xA1); //--set segment re-map 0 to 127 - CHECK
-    // #endif
-
-    // #ifdef SSD1306_INVERSE_COLOR
-    //     oled_write_cmd(0xA7); //--set inverse color
-    // #else
-    //     oled_write_cmd(0xA6); //--set normal color
-    // #endif
-    //     oled_write_cmd(0xA8); //--set multiplex ratio(1 to 64) - CHECK
-    //     oled_write_cmd(0x3F); //
-    //     oled_write_cmd(0xA4); //0xa4,Output follows RAM content;0xa5,Output ignores RAM content
-    //     oled_write_cmd(0xD3); //-set display offset - CHECK
-    //     oled_write_cmd(0x00); //-not offset
-    //     oled_write_cmd(0xD5); //--set display clock divide ratio/oscillator frequency
-    //     oled_write_cmd(0xF0); //--set divide ratio
-    //     oled_write_cmd(0xD9); //--set pre-charge period
-    //     oled_write_cmd(0x22); //
-    //     oled_write_cmd(0xDA); //--set com pins hardware configuration - CHECK
-    //     oled_write_cmd(0x12);
-    //     oled_write_cmd(0xDB); //--set vcomh
-    //     oled_write_cmd(0x20); //0x20,0.77xVcc
-    //     oled_write_cmd(0x8D); //--set DC-DC enable
-    //     oled_write_cmd(0x14); //
-    //     oled_write_cmd(0xAF); //--turn on SSD1306 panel
 }
 
 void oled_clean(void)
@@ -182,9 +135,7 @@ void oled_fill(unsigned char data)
         oled_write_cmd(0x00);     //low column start address
         oled_write_cmd(0x10);     //high column start address
         for (loop = 0; loop < 128; loop++)
-        {
             oled_write_data(data);
-        }
     }
 }
 
