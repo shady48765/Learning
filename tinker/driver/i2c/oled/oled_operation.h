@@ -20,5 +20,7 @@ void oled_fill(unsigned char data);
 void oled_on(void);
 void oled_off(void);
 void oled_set_pos(unsigned char x, unsigned char y);
+void oled_test(void);
+
 
 #endif
