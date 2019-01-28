@@ -37,7 +37,7 @@ static enum hrtimer_restart loop_hrtimer_callback(struct hrtimer * arg)
 
     if(0 == loop_counter % 2)
 		gpio_set_state(high);
-    else 
+    else
 		gpio_set_state(low);
 
 	loop_counter++;
@@ -73,18 +73,15 @@ static void blink_reacall_function(struct work_struct *work)
     wake_up_interruptible(&blink_waitqueue_head);
     usr_msg("queue woke-up, waitqueue_flag = %d", waitqueue_flag);
     // reschedule 10 times
-    if(waitqueue_flag < 3) {
-        waitqueue_flag += 1;
-        schedule_work(&blink_work);
-    } else {
+    waitqueue_flag += 1;
+    oled_power_on();
+    oled_fill(0xff);
+    schedule_work(&blink_work);
+    if(2 == waitqueue_flag){
         waitqueue_flag = 0;
         usr_msg("disable wake_up_interruptible, waitqueue_flag = %d", waitqueue_flag);
         // after 10 times schedule_work, program will be suspend
         usr_msg("---------> oled init loop");
-        oled_power_on();
-        // after 10 times schedule_work, program will be suspend
-        oled_fill(0xff);
-
     }
 }
 
@@ -177,10 +174,10 @@ int oled_i2c_send_byte(struct i2c_client *client, unsigned char sub_addr, unsign
     struct i2c_msg	msg;
 
     unsigned char 	temp[2] = {sub_addr, data};
-    
+
     temp[0] = sub_addr;
     temp[1] = data;
-    
+
 	msg.addr 	= client->addr;
     msg.len		= 2;		// write = sub-address + data
 	msg.flags 	= WRITE_FLAG;
@@ -199,13 +196,10 @@ int oled_i2c_send_byte(struct i2c_client *client, unsigned char sub_addr, unsign
 	int ret;
 
     mutex_lock(&oled_i2c_info->oled_i2c_lock);
-loop:
-    ret = i2c_smbus_write_byte_data(client, sub_addr, data);
-    if(ret < 0) {
-        // communication error use, normally not use
-        usr_msg("send error, retry.");
-        goto loop;
-    }
+    do {
+        err_msg("ready to sent sub_addr = 0x%x, data = 0x%x", sub_addr, data);
+        ret = i2c_smbus_write_byte_data(client, sub_addr, data);
+    } while(ret > 0);
     mutex_unlock(&oled_i2c_info->oled_i2c_lock);
 
     return ret;
@@ -279,7 +273,7 @@ static int oled_i2c_probe(struct i2c_client * client, const struct i2c_device_id
 		err_msg("error : oled driver register.");
 		return ret;
 	}
-    
+
     usr_msg("---> waitqueue_init");
 	waitqueue_init();
 #if HRTIMER_DEFINE
