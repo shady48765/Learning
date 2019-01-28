@@ -1,15 +1,14 @@
 /*-------------------- way 1: pinctrl start ------------------------*/
 // 2 --------------- pinctrl way -----------
 // 0.91 inch oled 128x64
-
-oled-rst {
+oled-status {
         compatible = "oled-pins";
-        label = "oled-rst-pins";
+        label = "oled-status-pins";
         pinctrl-name = "default",
-                        "rst_high";
+                        "oled_status_high";
         // GPIO6A1
-        pinctrl-0 = <&oled_rst_low>;
-        pinctrl-1 = <&oled_rst_high>;
+        pinctrl-0 = <&oled_status_set_low>;
+        pinctrl-1 = <&oled_status_set_high>;
         status = "okay";
 };
 
@@ -18,6 +17,9 @@ oled-rst {
     clock-frequency = <400000>;
     // ss1306 device id = ((ox3c << 1) | write_read_flag) 
     // 0x3c = 0x78 >> 1
+    pinctrl-names = "default";
+    pinctrl-0 = <&i2c1_xfer>;
+    
     oled: ss1306@3c {
         compatible = "oled,ssd1306";
         reg = <0x3c>;
@@ -31,15 +33,23 @@ oled-rst {
 
 &pinctrl {
     // GPIO6A1
-    oled_rst_low: oled-rst-low {
+    oled_status_set_low: oled-rst-low {
         pins = <RK_GPIO6 RK_PA1 RK_FUNC_GPIO &pcfg_pull_down>;
         // slew-rate = <1>;
         output-low;
     };
-    oled_rst_high: oled-rst-high {
+    oled_status_set_high: oled-rst-high {
         pins = <RK_GPIO6 RK_PA1 RK_FUNC_GPIO &pcfg_pull_up>;
         // slew-rate = <1>;
         output-high;
     };
+    // set i2c1 gpio to pullup, defalut voltage level to high
+    i2c1 {
+        i2c1_xfer: i2c1-xfer {
+            rockchip,pins = <8 4 RK_FUNC_1 &pcfg_pull_up>,
+                            <8 5 RK_FUNC_1 &pcfg_pull_up>;
+        };
+    };
 };
+
 /*-------------------- way 2: pinctrl end ------------------------*/

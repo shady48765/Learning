@@ -1,5 +1,5 @@
-#ifndef __FOO_PROC_H
-#define __FOO_PROC_H
+#ifndef __DRIVER_SIMPLE_IIO_EXAMPLE_H
+#define __DRIVER_SIMPLE_IIO_EXAMPLE_H
 
 #include <linux/jiffies.h>
 #include <linux/module.h>
@@ -17,8 +17,8 @@
 #include <linux/raid/pq.h>
 #include <linux/mutex.h>
 
-#define TIMER_TAG                   " <TIMER> "
-#define USR_MSG_LEVEL               KERN_ERR
+#define TIMER_TAG                   " <IIO> "
+#define USR_MSG_LEVEL               KERN_WARNING
 #define USR_ERR_LEVEL               KERN_ERR
 #define usr_msg(fmt, args...)       printk(USR_MSG_LEVEL TIMER_TAG " (function : %s), [line : %d] "fmt"\n",__func__, __LINE__, ##args);
 #define err_msg(fmt, args...)       printk(USR_ERR_LEVEL TIMER_TAG " (function : %s), [line : %d] "fmt"\n",__func__, __LINE__, ##args);
