@@ -194,14 +194,18 @@ int oled_i2c_send_byte(struct i2c_client *client, unsigned char sub_addr, unsign
 int oled_i2c_send_byte(struct i2c_client *client, unsigned char sub_addr, unsigned char data)
 {
 	int ret;
-
-    mutex_lock(&oled_i2c_info->oled_i2c_lock);
-    do {
+    
+#if 0
+	mutex_lock(&oled_i2c_info->oled_i2c_lock);
+	do {
         err_msg("ready to sent sub_addr = 0x%x, data = 0x%x", sub_addr, data);
         ret = i2c_smbus_write_byte_data(client, sub_addr, data);
     } while(ret > 0);
-    mutex_unlock(&oled_i2c_info->oled_i2c_lock);
-
+	mutex_unlock(&oled_i2c_info->oled_i2c_lock);
+#else
+	err_msg("ready to sent sub_addr = 0x%x, data = 0x%x", sub_addr, data);
+    ret = i2c_smbus_write_byte_data(client, sub_addr, data);
+#endif
     return ret;
 }
 #endif
