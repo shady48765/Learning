@@ -43,6 +43,7 @@ int foo_proc_create(void);
 
 #define USR_PWM_DRV_NAME                "pwm_demo"
 #define USED_HRS_TIMER					1
+#define TRANDITIONAL_WAY				0
 
 
 static struct   timer_list  foo_time;
@@ -56,13 +57,20 @@ static struct file_operations foo_fops = {
     .unlocked_ioctl = timer_ioctl,
 };
 
+struct dts_info {
+	unsigned int freq;
+	unsigned int plus_width;
+	unsigned int status;
+};
+
 struct pwm_dev {
-    unsigned int    pwm_major_number;
-    dev_t           pwm_dev_number;
+    unsigned int    pwm_major_num;
+    dev_t           pwm_dev_num;
     struct cdev     pwm_cdev;
     struct class    *pwm_class;
     struct device   *pwm_device;
 	struct mutex    lock;
+	struct dts_info info;
 };
 
 #endif

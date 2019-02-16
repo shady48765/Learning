@@ -1,32 +1,51 @@
+# ------------------------------------------------------- #
 # get system verison
 KVERS = $(shell uname -r)
-# get driver floder path
-CURDIR := $(shell pwd)
-
 
 # module install name
-MODULE_NAME = simple_pwm
+MODULE_NAME = pwm_demo
+
+# module test app name
+APP_NAME = app_${MODULE_NAME}
+
+CROSS_COMPILE = arm-linux-gnueabihf-
+CC = $(CROSS_COMPILE)gcc
+
 # Kernel modules
 obj-m += ${MODULE_NAME}.o
-# Specify flags for the module compilation.
-#EXTRA_CFLAGS=-g -O0
 
-temp += ${MODULE_NAME}.ko 
+# kernel dir
+KERNEL_DIR = /arm/tinker/debian_kernel
+# KERNEL_DIR = /home/quan/tinker/debian_kernel
+# get driver floder path
+CUR_DIR = $(shell pwd)
+
 all : kernel_modules
+
 kernel_modules:
-	make -C /lib/modules/$(KVERS)/build M=$(CURDIR) modules
-	@echo "---> build finished."
-cleanall:
-	make -C /lib/modules/$(KVERS)/build M=$(CURDIR) clean
-	rm -rvf .*.?.sw?p 
-	rm -rvf .*.?.swp 
-	@echo "---> all clean"
+	make -C $(KERNEL_DIR) M=$(CUR_DIR) modules ARCH=arm CROSS_COMPILE=arm-linux-gnueabihf-
+	@echo "---> kernel_modules build finished."
+
+app :
+	$(CC) $(APP_NAME).c -o $(APP_NAME)
+	@echo "---> app build finished."
+
+cleanall :
+	make -C $(KERNEL_DIR) M=$(CUR_DIR) clean
+	rm -rvf $(APP_NAME)
+	rm -rvf .*.?.sw?p
+	rm -rvf .*.?.swp
+	@echo "---> all clean."
+
 clean:
 	@echo "---> clean trash file."
 	rm -rvf .*.?.sw?p .*.?.swp *.o *.*.o .*.cmd .tmp_versions *.mod.c Module.symvers modules.order
+	@echo "---> clean finished."
+
 install:
-	@echo "---> install module $(temp)"
-	$(shell sudo insmod $(temp))
+	@echo "---> install module $(MODULE_NAME)"
+	$(shell sudo insmod $(MODULE_NAME).ko)
 remove:
 	@echo "---> remove module $(MODULE_NAME)"
-	$(shell sudo rmmod $(MODULE_NAME))
+	$(shell sudo rmmod $(MODULE_NAME).ko)
+#-------------------- END LINE --------------------------

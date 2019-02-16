@@ -5,7 +5,7 @@ CURDIR := $(shell pwd)
 
 
 # module install name
-MODULE_NAME = simple_pwm
+MODULE_NAME = pwm_demo
 # Kernel modules
 obj-m += ${MODULE_NAME}.o
 # Specify flags for the module compilation.
