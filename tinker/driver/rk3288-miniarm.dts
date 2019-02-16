@@ -740,6 +740,15 @@
 	status = "okay";
 };
 
+&pwm2 {
+	status = "okay";
+};
+
+&pwm3 {
+	status = "okay";
+};
+
+
 &saradc {
 	vref-supply = <&vcc18_ldo1>;
 	status ="okay";

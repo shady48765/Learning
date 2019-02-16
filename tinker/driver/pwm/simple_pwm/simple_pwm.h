@@ -14,14 +14,13 @@
 #include <linux/major.h>
 #include <linux/device.h>
 #include <linux/timer.h>        //for timer_list, jiffy timer, standard timer
-#include <linux/raid/pq.h>
 #include <linux/mutex.h>
 #include <linux/delay.h>
 
-#define TIMER_TAG                   " <WORKQUEUE> "
+#define TIMER_TAG                   " <PWM> "
 #define USR_MSG_LEVEL               KERN_ERR
 #define USR_ERR_LEVEL               KERN_ERR
-#define usr_msg(fmt, args...)       printk(USR_MSG_LEVEL TIMER_TAG " (function : %s), [line : %d] "fmt"\n",__func__, __LINE__, ##args)
+#define usr_msg(fmt, args...)       printk(USR_MSG_LEVEL TIMER_TAG ""fmt"\n",##args)
 #define err_msg(fmt, args...)       printk(USR_ERR_LEVEL TIMER_TAG " (function : %s), [line : %d] "fmt"\n",__func__, __LINE__, ##args)
 
 
@@ -42,8 +41,9 @@ int foo_proc_create(void);
 
 /**--------------------- function define end ---------------------------*/
 
-#define FOO_DEV_NAME                "foo_device"
-struct mutex    foo_mutex;
+#define USR_PWM_DRV_NAME                "pwm_demo"
+#define USED_HRS_TIMER					1
+
 
 static struct   timer_list  foo_time;
 static struct   timeval     old_tmval;
@@ -56,13 +56,13 @@ static struct file_operations foo_fops = {
     .unlocked_ioctl = timer_ioctl,
 };
 
-static struct my_cdev {
-    unsigned int    foo_major_number;
-    dev_t           foo_dev_number;
-    struct cdev     foo_cdev;
-    struct class    *foo_class;
-    struct device   *foo_device;
+struct pwm_dev {
+    unsigned int    pwm_major_number;
+    dev_t           pwm_dev_number;
+    struct cdev     pwm_cdev;
+    struct class    *pwm_class;
+    struct device   *pwm_device;
+	struct mutex    lock;
 };
-struct my_cdev  * foo_dev_info;
 
 #endif
