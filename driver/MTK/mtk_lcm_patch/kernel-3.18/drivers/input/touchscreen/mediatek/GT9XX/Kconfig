@@ -1,0 +1,17 @@
+#
+# Touchscreen driver configuration
+#
+if TOUCHSCREEN_GT9XX
+
+endif
+
+config TP_PROXIMITY_SUPPORT
+	bool "GT9XX for TPD_PROXIMITY_SUPPORT"
+	default n
+	help
+	  Say Y here if you have GT9XX TPD_PROXIMITY.
+
+	  If unsure, say N.
+
+	  To compile this dirver as a module, choose M here: the
+	  module will be called.
