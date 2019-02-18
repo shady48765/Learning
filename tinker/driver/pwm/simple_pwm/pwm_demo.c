@@ -21,42 +21,16 @@
 		status = "disabled";
 	};
 *******************************************************************************/
-#include "simple_pwm.h"
-#include <linux/time.h>	// for get system current time
-#include <linux/proc_fs.h>
-#include <linux/interrupt.h>
-#include <linux/device.h>
-#include <linux/err.h>
-#include <linux/pwm.h>
-
+#include "pwm_demo.h"
 
 /* set compatible dts start -----------------------------------*/
 
-static of_device_id usr_pwm_id[] = {
+static struct of_device_id usr_pwm_match_table[] = {
 	{.compatible = "pwm_module"},
 };
-MODULE_DEVICE_TABLE(pwm_drv_dts, usr_pwm_id)
+MODULE_DEVICE_TABLE(pwm_drv_dts, usr_pwm_match_table);
 /* set compatible dts end -----------------------------------*/
 
-
-/*-------------- proc file create start --------------------------------*/
-#if FOO_PROC_FILE
-#define FOO_PROC_NAME   "foo_proc"
-
-struct proc_dir_entry   *foo_proc_dir;
-
-int foo_proc_create(void)
-{
-    foo_proc_dir = proc_create(FOO_PROC_NAME, 0666, NULL, &foo_fops);
-    if(IS_ERR(foo_proc_dir)){
-        return -ENOMEM;
-    }
-    return 0;
-}
-#endif  // end #if FOO_PROC_FILE
-
-
-/*-------------- proc file create end ------------------*/
 /*-------------- standard timer start ------------------------------------*/
 #if USED_HRS_TIMER
 void foo_timer_callback(unsigned long arg)
@@ -188,12 +162,14 @@ static ssize_t usr_show(struct device *dev, struct device_attribute *attr,
 			char *buf)
 {
 	usr_msg("usr show");
+    return 0;
 }
 
 static ssize_t usr_close(struct device *dev, struct device_attribute *attr,
 			 const char *buf, size_t count)
 {
 	usr_msg("usr close");
+    return 0;
 }
 
 const struct device_attribute usr_pwm_attrs = {
@@ -327,14 +303,14 @@ static int usr_pwm_remove(struct platform_device *pdev)
 	return 0;
 }
 
-static int usr_pwm_suspend(struct platform_device *, pm_message_t state)
+static int usr_pwm_suspend(struct platform_device * pdev, pm_message_t state)
 {
-
+    return 0;
 }
 
-static int usr_pwm_resume(struct platform_device *)
+static int usr_pwm_resume(struct platform_device * pdev)
 {
-
+    return 0;
 }
 
 
@@ -345,13 +321,13 @@ static const struct platform_device_id usr_pwm_dev_id[] = {
     {"usr_pwm", 0},
     {/*keep this*/}
 };
-MODULE_DEVICE_TABLE(usr_pwm, oled_device_id);
+MODULE_DEVICE_TABLE(usr_pwm, usr_pwm_dev_id);
 
 struct platform_driver usr_pwm_drv = {
-	.driver {
+	.driver = {
 		.owner = THIS_MODULE,
 		.name = USR_PWM_DRV_NAME,
-		.of_match_table = of_match_ptr(usr_pwm_id), 
+		.of_match_table = of_match_ptr(usr_pwm_match_table), 
 	},
 	.id_table = usr_pwm_dev_id,
 	.probe = usr_pwm_probe,
