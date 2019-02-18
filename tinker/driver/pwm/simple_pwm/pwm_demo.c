@@ -207,8 +207,13 @@ const struct device_attribute usr_pwm_attrs = {
 
 static int usr_pwm_create_sysfs(struct device * dev)
 {
+    int err;
 	usr_msg("pwm device create file start");
-	device_create_file(dev, &usr_pwm_attrs);
+	err = device_create_file(dev, &usr_pwm_attrs);
+    if(err < 0) {
+        err_msg("error : create file");
+        return -EINVAL;
+    }
 }
 
 static int usr_pwm_destory_sysfs(struct device * dev)

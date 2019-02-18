@@ -202,9 +202,13 @@ int oled_i2c_send_byte(struct i2c_client *client, unsigned char sub_addr, unsign
         ret = i2c_smbus_write_byte_data(client, sub_addr, data);
     } while(ret > 0);
 	mutex_unlock(&oled_i2c_info->oled_i2c_lock);
-#else
+#elif 0
 	err_msg("ready to sent sub_addr = 0x%x, data = 0x%x", sub_addr, data);
     ret = i2c_smbus_write_byte_data(client, sub_addr, data);
+#else
+    char buff[2] = {sub_addr, data};
+    usr_msg("ready to sent sub_addr = 0x%x, data = 0x%x", sub_addr, data);
+    ret = i2c_master_send(client, buff, 2);
 #endif
     return ret;
 }
