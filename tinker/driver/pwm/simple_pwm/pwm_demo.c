@@ -25,67 +25,64 @@
 
 /* set compatible dts start -----------------------------------*/
 
-static struct of_device_id usr_pwm_match_table[] = {
+static const struct of_device_id usr_pwm_match_table[] = {
 	{.compatible = "pwm_module"},
+    {/** keep this */},
 };
-MODULE_DEVICE_TABLE(pwm_drv_dts, usr_pwm_match_table);
 /* set compatible dts end -----------------------------------*/
 
 /*-------------- standard timer start ------------------------------------*/
 #if USED_HRS_TIMER
-void foo_timer_callback(unsigned long arg)
+
+#define MS_TO_NS(x) (x * 1000000)      // ms to ns
+
+struct pwm_timer_info {
+	struct 	 mutex		 tim_lock;
+    struct   hrtimer     usr_hrtimer;
+    struct   timeval     timval;
+    ktime_t  tm_period;
+};
+
+static struct pwm_timer_info      * usr_tim;
+
+
+
+static enum hrtimer_restart pwm_hrtimer_callback(struct hrtimer * arg)
 {
-    struct timeval tm_val;
-    static int loop_counter = 0;
-    
-    // get current time and compare with before
-    usr_msg("schedule time arrived, jiffies = %lu", jiffies);
-    char * strs = (char *) arg;
-    usr_msg("got transferred args is : %s", strs);
-    // get current time
-    do_gettimeofday(&tm_val);
-    // calculator interval_time
-    usr_msg("interval time is %ld sencond", tm_val.tv_sec - old_tmval.tv_sec);
-    usr_msg("interval time is %ld usencond", tm_val.tv_usec - old_tmval.tv_usec);
-    // get current time and compare with before end
-    old_tmval = tm_val;         // reload old time value
-    
-    //test timer counter set from 1s to 10 second
-    usr_msg("loop %d, set timer counter to %d", loop_counter, loop_counter);
-    foo_time.expires = jiffies + loop_counter * HZ;             // reset counter to loop_counter sencod
-    if(30 == loop_counter)
-        loop_counter = 1;
-    loop_counter++;
-    add_timer(&foo_time);                    //recount
+    ktime_t now = arg->base->get_time();
+    usr_msg("timer running at jiffies=%ld\n", jiffies);
+    hrtimer_forward(arg, now, usr_tim->tm_period);
+    return HRTIMER_RESTART;
 }
 
-int foo_timer_init(void)
+int usr_pwm_timer_init(unsigned int usr_ticks)
 {
-    int retval = 0;
-    mutex_lock(&foo_mutex);
-    init_timer(&foo_time);                                      // init kernel timer
-    do_gettimeofday(&old_tmval);                                // get current time
-    foo_time.function = foo_timer_callback;                     // set call back function
-    foo_time.data = (unsigned long) "---> transfer param";      // set call back function transfer parameter
-    foo_time.expires = jiffies + 1 * HZ;                        // set counter timer to 1 sencod
-    add_timer(&foo_time);                                       // add timer to kernel list
-    mutex_unlock(&foo_mutex);           
+    int retval;
+
+    if(usr_ticks > 5000 || usr_ticks <= 0) {
+        err_msg("error : init timer ticks error");
+        return -EINVAL;
+    }
+    usr_tim = kmalloc(sizeof(struct pwm_timer_info), GFP_KERNEL);
+    if(!usr_tim) {
+        err_msg("error : usr_tim struct malloc");
+        retval = -ENOMEM;
+        return retval;
+    }
+    
+    mutex_init(&usr_tim->tim_lock);
+    mutex_lock(&usr_tim->tim_lock);
+    // ktime_set(const s64 secs, const unsigned long nsecs); // param1: second, param2:nanosecond
+    usr_tim->tm_period = ktime_set(0, MS_TO_NS(usr_ticks));     // set 1second, 1000 nanosecond.
+    hrtimer_init(&usr_tim->usr_hrtimer, CLOCK_REALTIME, HRTIMER_MODE_REL);
+    usr_tim->usr_hrtimer.function = pwm_hrtimer_callback;
+    hrtimer_start(&usr_tim->usr_hrtimer, usr_tim->tm_period, HRTIMER_MODE_REL);
+    mutex_unlock(&usr_tim->tim_lock);
 
     return retval;
 }
-#endif // end #if FOO_STANDARD_TIMER
+#endif // end #if USED_HRS_TIMER
 
-
-
-
-
-
-# if 0
-static int usr_pwm_drv_create_file(void)
-{
-	driver_create_file(struct device_driver * drv, const struct driver_attribute * attr);
-}
-#endif
 
 #if TRANDITIONAL_WAY
 static int pwm_open(struct inode *inode, struct file *filp)
@@ -93,7 +90,6 @@ static int pwm_open(struct inode *inode, struct file *filp)
     usr_msg("oled proc : oled_i2c_open");
     return 0;
 }
-
 static ssize_t pwm_wirte(struct file *flip, const char __user *buff,
                                     size_t counter, loff_t *fops)
 {
@@ -153,10 +149,7 @@ static struct file_operations usr_fops = {
 	.unlocked_ioctl = pwm_ioctl,
 };
 
-#else
-
-
-
+#else   // #if TRANDITIONAL_WAY
 
 static ssize_t usr_show(struct device *dev, struct device_attribute *attr,
 			char *buf)
@@ -172,7 +165,7 @@ static ssize_t usr_close(struct device *dev, struct device_attribute *attr,
     return 0;
 }
 
-const struct device_attribute usr_pwm_attrs = {
+static struct device_attribute usr_pwm_attrs = {
 	.show = usr_show,
 	.store = usr_close,
 	.attr = {
@@ -181,31 +174,32 @@ const struct device_attribute usr_pwm_attrs = {
 	},
 };
 
-static int usr_pwm_create_sysfs(struct device * dev)
+
+static int usr_pwm_dev_create_file(struct device * dev)
 {
     int err;
 	usr_msg("pwm device create file start");
 	err = device_create_file(dev, &usr_pwm_attrs);
     if(err < 0) {
         err_msg("error : create file");
-        return -EINVAL;
+        err =  -EINVAL;
     }
+    return err;
 }
 
 static int usr_pwm_destory_sysfs(struct device * dev)
 {
 	usr_msg("pwm device destory file start");
 	device_remove_file(dev, &usr_pwm_attrs);
+    return 0;
 }
-
-#endif // end #define TRANDITIONAL_WAY
+#endif // end #if TRANDITIONAL_WAY
 
 static int usr_pwm_register_device(struct platform_device *pdev)
 {
     int ret;
 	struct pwm_dev * pwm_dev;
-	pwm_dev = platform_get_drvdata(pdev);
-	
+	pwm_dev = platform_get_drvdata(pdev);	
 	
     ret = alloc_chrdev_region(&pwm_dev->pwm_dev_num, 0, 1, USR_PWM_DRV_NAME);
     if(ret < 0) {
@@ -250,10 +244,10 @@ err_cdev_add:
     return ret;
 	
 	
-#else
-	usr_pwm_create_sysfs(&pdev->dev);
-
-#endif // end #define TRANDITIONAL_WAY
+#else   // #if TRANDITIONAL_WAY
+	ret = usr_pwm_dev_create_file(&pdev->dev);
+    return ret;
+#endif // end #if TRANDITIONAL_WAY
 }
 
 
@@ -281,8 +275,9 @@ static void usr_pwm_unregister_device(struct platform_device *pdev)
 static int usr_pwm_probe(struct platform_device *pdev)
 {
     int ret;
+   	struct pwm_dev *usr_pwm_info;
+
 	usr_msg("pwm driver init start");
-	struct pwm_dev *  usr_pwm_info;
 	usr_pwm_info = kmalloc(sizeof(struct pwm_dev), GFP_KERNEL);
 	if(!usr_pwm_info) {
 		err_msg(" err : kmalloc");
@@ -293,7 +288,12 @@ static int usr_pwm_probe(struct platform_device *pdev)
 	
 	dev_set_drvdata(&pdev->dev, usr_pwm_info);
 
-	usr_pwm_register_device(pdev);
+	ret = usr_pwm_register_device(pdev);
+    if(ret < 0) {
+        err_msg("error : pwm driver register.");
+        kfree(usr_pwm_info);
+    }
+    return ret;
 	
 }
 
@@ -305,6 +305,7 @@ static int usr_pwm_remove(struct platform_device *pdev)
 
 static int usr_pwm_suspend(struct platform_device * pdev, pm_message_t state)
 {
+    
     return 0;
 }
 
@@ -312,9 +313,6 @@ static int usr_pwm_resume(struct platform_device * pdev)
 {
     return 0;
 }
-
-
-	
 
 
 static const struct platform_device_id usr_pwm_dev_id[] = {

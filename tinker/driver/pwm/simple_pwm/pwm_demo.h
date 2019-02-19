@@ -48,10 +48,6 @@
 #define FOO_PROC_NAME                   0
 #define TRANDITIONAL_WAY				0
 
-
-static struct   timer_list  foo_time;
-static struct   timeval     old_tmval;
-
 struct dts_info {
 	unsigned int freq;
 	unsigned int plus_width;
@@ -67,9 +63,5 @@ struct pwm_dev {
 	struct mutex    lock;
 	struct dts_info info;
 };
-
-struct pwm_timer {
-    
-}
 
 #endif
