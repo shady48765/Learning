@@ -3,7 +3,7 @@
 KVERS = $(shell uname -r)
 
 # module install name
-MODULE_NAME = simple_pwm
+MODULE_NAME = pwm_demo
 
 # module test app name
 APP_NAME = app_${MODULE_NAME}

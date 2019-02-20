@@ -35,10 +35,11 @@ static enum hrtimer_restart loop_hrtimer_callback(struct hrtimer * arg)
     usr_msg("loop counter = %d, timer : jiffies=%ld\n",loop_counter, jiffies);
     hrtimer_forward(arg, now, tm_period);
 
-	if(0 == loop_counter % 2)
+    if(0 == loop_counter % 2)
 		gpio_set_state(high);
-	else
+    else
 		gpio_set_state(low);
+
 	loop_counter++;
     return HRTIMER_RESTART;
 }
@@ -72,20 +73,16 @@ static void blink_reacall_function(struct work_struct *work)
     wake_up_interruptible(&blink_waitqueue_head);
     usr_msg("queue woke-up, waitqueue_flag = %d", waitqueue_flag);
     // reschedule 10 times
-    if(waitqueue_flag < 3) {
-        if(0 == waitqueue_flag % 2)
-			gpio_set_state(high);
-        else
-			gpio_set_state(low);
-        mdelay(300);
-        waitqueue_flag += 1;
-        schedule_work(&blink_work);
-    } else {
-       // after 10 times schedule_work, program will be suspend
-        oled_power_on();
+    waitqueue_flag += 1;
+    oled_power_on();
+    oled_fill(0xff);
+    schedule_work(&blink_work);
+    if(2 == waitqueue_flag){
         waitqueue_flag = 0;
         usr_msg("disable wake_up_interruptible, waitqueue_flag = %d", waitqueue_flag);
-   }
+        // after 10 times schedule_work, program will be suspend
+        usr_msg("---------> oled init loop");
+    }
 }
 
 void waitqueue_init(void)
@@ -173,19 +170,13 @@ static long oled_i2c_ioctl(struct file *flip, unsigned int cmd,
 #if 0
 int oled_i2c_send_byte(struct i2c_client *client, unsigned char sub_addr, unsigned char data)
 {
-    int ret, index;
+    int ret;
     struct i2c_msg	msg;
-    // unsigned char 	temp[2] = {sub_addr, data};
-    unsigned char temp[2] = {0};
+
+    unsigned char 	temp[2] = {sub_addr, data};
+
     temp[0] = sub_addr;
     temp[1] = data;
-    
-    for(index = 0; index <= strlen(temp); index++)
-        usr_msg("---> i2c send sub_addr = 0x%x, data = 0x%x", sub_addr, temp[index]);
-
-    usr_msg("---> strlen send length = %d", strlen(temp));
-    usr_msg("---> siezof send length = %d", sizeof(temp)/sizeof(temp[0]));
-    usr_msg("---> i2c flags = 0x%x, client->addr = 0x%x", client->flags, client->addr);
 
 	msg.addr 	= client->addr;
     msg.len		= 2;		// write = sub-address + data
@@ -193,52 +184,33 @@ int oled_i2c_send_byte(struct i2c_client *client, unsigned char sub_addr, unsign
 	msg.buf 	= temp;
 
     mutex_lock(&oled_i2c_info->oled_i2c_lock);
-    // return sent message count
     ret = i2c_transfer(client->adapter, &msg, 1);
     mutex_unlock(&oled_i2c_info->oled_i2c_lock);
+    usr_msg("---> sub_addr = 0x%x, data = 0x%x", sub_addr, data);
     memset(temp, 0, sizeof(temp));
-    return ((ret > 0) ? ret : -ENOMSG);
+    return ret;
 }
 #else
 int oled_i2c_send_byte(struct i2c_client *client, unsigned char sub_addr, unsigned char data)
 {
 	int ret;
-	unsigned char * buff = kmalloc(sizeof(char) * 2, GFP_KERNEL);
-	buff[0] = sub_addr;
-	buff[1] = data;
-	usr_msg("---> i2c send sub_addr = 0x%x, buff_size = %d", sub_addr, ARRAY_SIZE(buff));
-	ret = i2c_master_send(client, buff, ARRAY_SIZE(buff));
-
-
-
-#if 0
-    int ret, index;
-    struct i2c_msg	msg;
-    // unsigned char 	temp[2] = {sub_addr, data};
-    unsigned char temp[3] = {0};
-    temp[0] = sub_addr >> 8;
-    temp[1] = sub_addr & 0xff;
-    temp[2] = data;
     
-    for(index = 0; index <= strlen(temp); index++)
-        usr_msg("---> i2c send sub_addr = 0x%x, data = 0x%x", sub_addr, temp[index]);
-
-    usr_msg("---> strlen send length = %d", strlen(temp));
-    usr_msg("---> siezof send length = %d", sizeof(temp)/sizeof(temp[0]));
-    usr_msg("---> i2c flags = 0x%x, client->addr = 0x%x", client->flags, client->addr);
-
-	msg.addr 	= client->addr;
-    msg.len		= 3;		// write = sub-address + data
-	msg.flags 	= WRITE_FLAG;
-	msg.buf 	= temp;
-
-    mutex_lock(&oled_i2c_info->oled_i2c_lock);
-    // return sent message count
-    ret = i2c_transfer(client->adapter, &msg, 1);
-    mutex_unlock(&oled_i2c_info->oled_i2c_lock);
-    memset(temp, 0, sizeof(temp));
-    return ((ret > 0) ? ret : -ENOMSG);
+#if 0
+	mutex_lock(&oled_i2c_info->oled_i2c_lock);
+	do {
+        err_msg("ready to sent sub_addr = 0x%x, data = 0x%x", sub_addr, data);
+        ret = i2c_smbus_write_byte_data(client, sub_addr, data);
+    } while(ret > 0);
+	mutex_unlock(&oled_i2c_info->oled_i2c_lock);
+#elif 0
+	err_msg("ready to sent sub_addr = 0x%x, data = 0x%x", sub_addr, data);
+    ret = i2c_smbus_write_byte_data(client, sub_addr, data);
+#else
+    char buff[2] = {sub_addr, data};
+    usr_msg("ready to sent sub_addr = 0x%x, data = 0x%x", sub_addr, data);
+    ret = i2c_master_send(client, buff, 2);
 #endif
+    return ret;
 }
 #endif
 
@@ -309,6 +281,7 @@ static int oled_i2c_probe(struct i2c_client * client, const struct i2c_device_id
 		err_msg("error : oled driver register.");
 		return ret;
 	}
+
     usr_msg("---> waitqueue_init");
 	waitqueue_init();
 #if HRTIMER_DEFINE
@@ -345,6 +318,7 @@ static int oled_i2c_remove(struct i2c_client *client)
 
     return 0;
 }
+
 
 
 

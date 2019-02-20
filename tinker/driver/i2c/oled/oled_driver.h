@@ -75,6 +75,9 @@ void waitqueue_init(void);
 /* extern function declartion ------------------------------------------------*/
 extern void oled_power_on(void);
 extern void oled_init(void);
+extern void oled_test(void);
+extern void oled_fill(unsigned char data);
+
 /* oled device information struction ---------------------------------------*/
 struct _oled_device_info {
     unsigned int    oled_major;

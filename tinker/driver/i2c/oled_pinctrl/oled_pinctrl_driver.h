@@ -37,9 +37,10 @@
 
 
 
-#define OLED_DEBUG					 0
-#define HRTIMER_DEFINE               1
-#define I2C_16_BIT_MODE				 0
+#define OLED_DEBUG					0
+#define HRTIMER_DEFINE              1
+#define I2C_16_BIT_MODE				0
+#define CHECK_I2C                   1
 
 
 #define READ_FLAG			0x0001
@@ -47,7 +48,7 @@
 
 
 #define TAG                         " <OLED> "
-#define USR_MSG_LEVEL               KERN_ERR
+#define USR_MSG_LEVEL               KERN_WARNING
 #define USR_ERR_LEVEL               KERN_ERR
 #define usr_msg(fmt, args...)       printk(USR_MSG_LEVEL TAG ""fmt"\n", ##args)
 #define err_msg(fmt, args...)       printk(USR_ERR_LEVEL TAG " (function : %s), [line : %d] "fmt"\n",__func__, __LINE__, ##args)
@@ -60,31 +61,8 @@ typedef enum {
     high    = 1
 }status;
 
-
-void gpio_set_state(status state);
-int oled_get_i2c_dts_info(struct device *oled_dev);
-int register_oled_driver(void);
-
-int oled_i2c_send_byte(struct i2c_client * client, unsigned char addr, unsigned char data);
-int oled_i2c_send_matrix(struct i2c_client * client, unsigned char addr, unsigned char *data, unsigned int length);
-static int oled_get_dev_dts_info(struct platform_device * pdev);
-/* waitqueue function ------------------------------------------------*/
-void waitqueue_init(void);
-
-/* extern function declartion ------------------------------------------------*/
-extern void oled_power_on(void);
-extern void oled_init(void);
 /* oled device information struction ---------------------------------------*/
-struct _oled_device_info {
-
-    struct mutex    			oled_dev_lock;
-	struct device_node 	       	*dev_node;
-	struct pinctrl 		        *dev_pinctrl;
-	struct pinctrl_state 		*rst_high;
-	struct pinctrl_state 		*rst_low;
-};
-
-struct _oled_dev {
+struct _oled_dev_info {
     unsigned int    major;
     dev_t           devno;
     struct cdev     cdev;
@@ -92,30 +70,89 @@ struct _oled_dev {
     struct device   * dev;
 	struct mutex 	dev_lock;
 };
-/* oled dts information struction ---------------------------------------*/
-struct _oled_dts_info {
+#if 0
+/* oled i2c dts information struction ---------------------------------------*/
+struct _oled_i2c_dts_info {
 	struct device_node      	*i2c_node;
+	struct device_node 	       	*dev_node;
+
 	unsigned int 				oled_rst_pin;
 	unsigned int 		        oled_width;
 	unsigned int 		        oled_height;
 	unsigned int 		        oled_i2c_clk;
+	
+	struct pinctrl 		        *dev_pinctrl;
+	struct pinctrl_state 		*rst_high;
+	struct pinctrl_state 		*rst_low;
+	
 };
+#endif
+/* oled i2c dts information struction ---------------------------------------*/
+struct _oled_i2c_dts_info {
+	struct device_node      	*i2c_node;
 
+	unsigned int 				oled_status_pin;
+	unsigned int 		        oled_width;
+	unsigned int 		        oled_height;
+	unsigned int 		        oled_i2c_clk;
+	
+};
+/* oled dev dts information struction ---------------------------------------*/
+struct _oled_dev_dts_info {
+	struct device_node 	       	*dev_node;
+	
+	struct pinctrl 		        *dev_pinctrl;
+	struct pinctrl_state 		*statu_high;
+	struct pinctrl_state 		*statu_low;
+
+	struct mutex 				dts_lock;
+	
+};
 /* oled i2c information struction ---------------------------------------*/
 struct _oled_i2c_info {
 	char 				        * data;
 	struct i2c_client 	        * client;
-    struct mutex                oled_i2c_lock;
-    struct i2c_msg		        oled_i2c_msg;
-    struct _oled_dts_info       * dts;
-	struct _oled_dev			* dev;
+    struct mutex                oled_lock;
+    struct i2c_msg		        msg;
+    struct _oled_dev_dts_info   * dev_dts_info;
+	struct _oled_i2c_dts_info 	* i2c_dts_info;
+	struct _oled_dev_info		* dev_info;
+	struct platform_device 		* oled_pdev;
 };
+/* oled timer -----------------------------------------------------------*/
+struct _oled_timer {
+    struct mutex            timer_lock;
+    struct hrtimer          oled_timer;
+    ktime_t                 tm_period;
+};
+struct _oled_timer          * tim;
+
+
 
 /* oled whole information struction ---------------------------------------*/
 
+static int oled_get_i2c_dts_info(struct i2c_client * client);
+
+int oled_i2c_send_byte(struct i2c_client * client, unsigned char addr, unsigned char data);
+int oled_i2c_send_matrix(struct i2c_client * client, unsigned char addr, unsigned char *data, unsigned int length);
+
+static int register_oled_i2c_driver(struct _oled_i2c_info *i2c_info);
+static int unregister_oled_i2c_driver(void);
+
+static int oled_get_dev_dts_info(struct platform_device * pdev);
+static int gpio_set_state(status state);
+/* waitqueue function ------------------------------------------------*/
+void waitqueue_init(void);
+
+/* extern function declartion ------------------------------------------------*/
+extern void oled_power_on(void);
+extern void oled_init(void);
+
+
 
 #if HRTIMER_DEFINE
-    void oled_timer_init(unsigned long     ticks);
+    static int oled_timer_init(unsigned long ticks);
+	static void oled_timer_remove(void);
 #endif
 
 #endif

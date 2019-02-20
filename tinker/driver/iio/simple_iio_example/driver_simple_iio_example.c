@@ -1,4 +1,4 @@
-#include "foo_proc.h"
+#include "driver_simple_iio_example.h"
 #include <linux/time.h>	// for get system current time
 
 /*-------------- proc file create start ------------------*/

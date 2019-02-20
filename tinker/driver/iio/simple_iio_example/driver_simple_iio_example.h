@@ -1,5 +1,5 @@
-#ifndef __SIMPLE_PWM_H
-#define __SIMPLE_PWM_H
+#ifndef __DRIVER_SIMPLE_IIO_EXAMPLE_H
+#define __DRIVER_SIMPLE_IIO_EXAMPLE_H
 
 #include <linux/jiffies.h>
 #include <linux/module.h>
@@ -16,15 +16,14 @@
 #include <linux/timer.h>        //for timer_list, jiffy timer, standard timer
 #include <linux/raid/pq.h>
 #include <linux/mutex.h>
-#include <linux/delay.h>
 
-#define TIMER_TAG                   " <WORKQUEUE> "
-#define USR_MSG_LEVEL               KERN_ERR
+#define TIMER_TAG                   " <IIO> "
+#define USR_MSG_LEVEL               KERN_WARNING
 #define USR_ERR_LEVEL               KERN_ERR
-#define usr_msg(fmt, args...)       printk(USR_MSG_LEVEL TIMER_TAG " (function : %s), [line : %d] "fmt"\n",__func__, __LINE__, ##args)
-#define err_msg(fmt, args...)       printk(USR_ERR_LEVEL TIMER_TAG " (function : %s), [line : %d] "fmt"\n",__func__, __LINE__, ##args)
+#define usr_msg(fmt, args...)       printk(USR_MSG_LEVEL TIMER_TAG " (function : %s), [line : %d] "fmt"\n",__func__, __LINE__, ##args);
+#define err_msg(fmt, args...)       printk(USR_ERR_LEVEL TIMER_TAG " (function : %s), [line : %d] "fmt"\n",__func__, __LINE__, ##args);
 
-
+#define FOO_DEV_NAME                "my_timer"
 
 /**--------------------- function define start ---------------------------*/
 static int timer_open(struct inode *inode, struct file *filp);
@@ -38,11 +37,9 @@ long timer_ioctl (struct file *flip, unsigned int cmd, unsigned long param);
 int foo_device_create(void);
 int foo_timer_init(void);
 void foo_timer_callback(unsigned long args);
-int foo_proc_create(void);
-
 /**--------------------- function define end ---------------------------*/
 
-#define FOO_DEV_NAME                "foo_device"
+
 struct mutex    foo_mutex;
 
 static struct   timer_list  foo_time;
