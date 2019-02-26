@@ -48,7 +48,7 @@ static enum hrtimer_restart loop_hrtimer_callback(struct hrtimer * arg)
 static int oled_timer_init(unsigned long ticks)
 {
 	usr_msg("------> system jiffies = %ld", jiffies);
-	tim = kzalloc(sizeof(struct _oled_timer)), GFP_KERNEL);
+	tim = kzalloc(sizeof(struct _oled_timer), GFP_KERNEL);
 	if(IS_ERR(tim)) {
 		err_msg("error : malloc struct _oled_timer");
 		return PTR_ERR(_oled_timer);

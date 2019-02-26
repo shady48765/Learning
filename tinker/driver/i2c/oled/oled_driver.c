@@ -207,13 +207,13 @@ int oled_i2c_send_byte(struct i2c_client *client, unsigned char sub_addr, unsign
     ret = i2c_smbus_write_byte_data(client, sub_addr, data);
 #else
     char buff[2] = {sub_addr, data};
-    usr_msg("ready to sent sub_addr = 0x%x, data = 0x%x", sub_addr, data);
+    usr_msg("ready to sent client_addr = 0x%x, sub_addr = 0x%x, data = 0x%x", client->addr, sub_addr, data);
+	
     ret = i2c_master_send(client, buff, 2);
 #endif
     return ret;
 }
 #endif
-
 
 
 int oled_i2c_send_matrix(struct i2c_client * client, unsigned char sub_addr, unsigned char *data, unsigned int length)
