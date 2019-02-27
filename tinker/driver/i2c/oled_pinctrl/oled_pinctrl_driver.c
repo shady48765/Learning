@@ -291,7 +291,7 @@ static int oled_get_i2c_dts_info(struct i2c_client * client)
 	return 0;
 
 }
-s
+
 static int oled_i2c_probe(struct i2c_client * client, const struct i2c_device_id *i2c_id)
 {
     int ret = 0;

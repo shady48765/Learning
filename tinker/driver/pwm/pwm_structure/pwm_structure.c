@@ -26,9 +26,10 @@
 /* set compatible dts start -----------------------------------*/
 
 static const struct of_device_id usr_pwm_match_table[] = {
-	{.compatible = "pwm_module"},
+	{.compatible = "pwm-dimming",},
     {/** keep this */},
 };
+MODULE_DEVICE_TABLE(of, usr_pwm_match_table);
 /* set compatible dts end -----------------------------------*/
 
 /*-------------- standard timer start ------------------------------------*/
