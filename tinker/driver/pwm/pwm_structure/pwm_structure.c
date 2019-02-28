@@ -23,14 +23,28 @@
 *******************************************************************************/
 #include "pwm_structure.h"
 
-/* set compatible dts start -----------------------------------*/
+/* start define struct -----------------------------------*/
 
-static const struct of_device_id usr_pwm_match_table[] = {
-	{.compatible = "pwm-dimming",},
-    {/** keep this */},
+static struct dts_info {
+	unsigned int pin;
+
+	unsigned int period;
+	unsigned int freq;
+	pwm_polarity polarity;
+	unsigned int duty_cycle;
 };
-MODULE_DEVICE_TABLE(of, usr_pwm_match_table);
-/* set compatible dts end -----------------------------------*/
+
+
+static struct pwm_dev {	
+	struct mutex 		lock;
+	struct pwm_chip 	chip;
+	struct dts_info 	dts_info;
+
+	int foo;
+	int bar;
+};
+
+/* end define struct -----------------------------------*/
 
 /*-------------- standard timer start ------------------------------------*/
 #if USED_HRS_TIMER
@@ -82,7 +96,7 @@ int usr_pwm_timer_init(unsigned int usr_ticks)
 }
 #endif // end #if USED_HRS_TIMER
 
-
+#if DEV_CREATE_FILE
 static ssize_t usr_show(struct device *dev, struct device_attribute *attr,
 			char *buf)
 {
@@ -125,6 +139,7 @@ static void usr_pwm_destory_sysfs(struct device * dev)
 	device_remove_file(dev, &usr_pwm_attrs);
     return 0;
 }
+#endif      // end of #if DEV_CREATE_FILE
 
 
 static int usr_pwm_register_device(struct platform_device *pdev)
@@ -157,49 +172,153 @@ static void usr_pwm_unregister_device(struct platform_device *pdev)
 	usr_pwm_destory_sysfs(&pdev->dev);
 }
 
+static int usr_pwm_request(void)
+{
+    pwm_get();
+}
+
+
+
+
+
+
+
+
+static inline struct pwm_dev *to_chip(struct pwm_chip *chip)
+{
+	return container_of(chip, struct pwm_dev, chip);
+}
+
+
+static int pwm_request(struct pwm_chip *chip, struct pwm_device *pwm)
+{
+	/*
+	 * One may need to do some initialization when a PWM channel
+	 * of the controller is requested. This should be done here.
+	 *
+	 * One may do something like 
+	 *     prepare_pwm_device(struct pwm_chip *chip, pwm->hwpwm);
+	 */
+
+	return 0;
+}
+
+static int pwm_config(struct pwm_chip *chip, struct pwm_device *pwm,
+			       int duty_ns, int period_ns)
+{
+
+    /*
+     * In this function, one ne can do something like:
+     *      struct pwm_dev *priv = to_chip(chip);
+     *
+	 *      return send_command_to_set_config(priv,
+     *                      duty_ns, period_ns);
+     */
+
+	return 0;
+}
+
+static int pwm_enable(struct pwm_chip *chip, struct pwm_device *pwm)
+{
+    /*
+     * In this function, one ne can do something like:
+     *  struct pwm_dev *priv = to_chip(chip);
+     *
+     * return foo_chip_set_pwm_enable(priv, pwm->hwpwm, true);
+     */
+    
+    pr_info("Somebody enabled PWM device number %d of this chip", pwm->hwpwm);
+	return 0;
+}
+
+static void pwm_disable(struct pwm_chip *chip, struct pwm_device *pwm)
+{
+    /*
+     * In this function, one ne can do something like:
+     *  struct pwm_dev *priv = to_chip(chip);
+     *
+     * return foo_chip_set_pwm_enable(priv, pwm->hwpwm, false);
+     */
+    
+    pr_info("Somebody disabled PWM device number %d of this chip", pwm->hwpwm);
+}
+
+static const struct pwm_ops pwm_ops = {
+	.request = pwm_request,
+	.config  = pwm_config,
+	.enable  = pwm_enable,
+	.disable = pwm_disable,
+	.owner   = THIS_MODULE,
+};
+
+
+static int read_pwm_dts_info(struct platform_device *pdev)
+{
+	static node 
+
+	of_find_compatible_node(struct device_node * from, const char * type, const char * compat)
+}
 
 static int usr_pwm_probe(struct platform_device *pdev)
 {
-    int ret;
-   	struct pwm_dev *usr_pwm_info;
-
+    int err;
+   	struct pwm_dev * dev_info;
+	
 	usr_msg("pwm driver init start");
-	usr_pwm_info = kmalloc(sizeof(struct pwm_dev), GFP_KERNEL);
-	if(!usr_pwm_info) {
-		err_msg(" err : kmalloc");
+	dev_info = devm_kmalloc(sizeof(struct pwm_dev), GFP_KERNEL);
+	if(IS_ERR(dev_info)) {
+		err_msg(" err : devm_kmalloc");
 		return -ENOMEM;
 	}
-	memset(usr_pwm_info, 0, sizeof(struct pwm_dev));
-    mutex_init(&usr_pwm_info->lock);
+	memset(dev_info, 0, sizeof(struct pwm_dev));
 	
-	dev_set_drvdata(&pdev->dev, usr_pwm_info);
+    mutex_init(&dev_info->lock);
+	dev_info->chip.ops  = &pwm_ops;
+	dev_info->chip.dev  = &pdev->dev;
+	dev_info->chip.base = -1;	// Dynamic base
+	dev_info->chip.npwm = 2;	// 2 channel controller
 
-	ret = usr_pwm_register_device(pdev);
-    if(ret < 0) {
-        err_msg("error : pwm driver register.");
-        kfree(usr_pwm_info);
-    }
-    return ret;
+	platform_set_drvdata(pdev, dev_info);
+
+	err = pwmchip_add(&dev_info->chip);
+	if(err < 0) {
+		err = -ENODEV;
+		err_msg("error : pwmchip_add");
+		goto err_no1;
+	}
 	
+	return err;
+
+
+err_no1:
+	returnr err;
 }
 
 static int usr_pwm_remove(struct platform_device *pdev)
 {
-	usr_pwm_unregister_device(pdev);
-	return 0;
+	struct pwm_dev * dev_info = platform_get_drvdata(pdev);
+	usr_msg("move in usr_pwm_remove.");
+	return pwmchip_remove(&dev_info->chip);
 }
 
 static int usr_pwm_suspend(struct platform_device * pdev, pm_message_t state)
 {
-    
+    usr_msg("move in usr_pwm_suspend.");
     return 0;
 }
 
 static int usr_pwm_resume(struct platform_device * pdev)
 {
+	usr_msg("move in usr_pwm_resume.");
     return 0;
 }
 
+
+static const struct of_device_id usr_pwm_match_table[] = {
+	{.compatible = "pwm-dimming",},
+    {/** keep this */},
+};
+MODULE_DEVICE_TABLE(of, usr_pwm_match_table);
 
 static const struct platform_device_id usr_pwm_dev_id[] = {
     {"usr_pwm", 0},
@@ -209,33 +328,20 @@ MODULE_DEVICE_TABLE(usr_pwm, usr_pwm_dev_id);
 
 struct platform_driver usr_pwm_drv = {
 	.driver = {
-		.owner = THIS_MODULE,
-		.name = USR_PWM_DRV_NAME,
+		.owner          = THIS_MODULE,
+		.name           = USR_PWM_DRV_NAME,
 		.of_match_table = of_match_ptr(usr_pwm_match_table), 
 	},
 	.id_table = usr_pwm_dev_id,
-	.probe = usr_pwm_probe,
-	.remove = usr_pwm_remove,
-	.suspend = usr_pwm_suspend,
-	.resume = usr_pwm_resume,
+	.probe    = usr_pwm_probe,
+	.remove   = usr_pwm_remove,
+	.suspend  = usr_pwm_suspend,
+	.resume   = usr_pwm_resume,
 };
 
-static int __init pwm_init(void)
-{
-	usr_msg("usr pwm module init start");
-	return platform_driver_register(&usr_pwm_drv);
-}
+module_platform_driver(usr_pwm_drv);
 
-static void __exit pwm_exit(void)
-{
-	usr_msg("usr pwm module exit start");
-	platform_driver_unregister(&usr_pwm_drv);
-}
-
-module_init(pwm_init);
-module_exit(pwm_exit);
-
-MODULE_LICENSE("GPL v2");
+MODULE_LICENSE("GPL");
 MODULE_AUTHOR("quan");
 MODULE_DESCRIPTION("Linux kernel pwm driver demo.");
 MODULE_ALIAS("PWM DEMO");

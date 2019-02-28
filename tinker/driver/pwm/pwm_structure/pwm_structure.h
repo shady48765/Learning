@@ -6,6 +6,7 @@
 #include <linux/init.h>
 #include <linux/cdev.h>
 #include <linux/errno.h>
+#include <linux/err.h>
 #include <linux/fs.h>
 #include <linux/slab.h>
 #include <linux/uaccess.h>
@@ -22,8 +23,7 @@
 #include <linux/time.h>	            // for get system current time
 #include <linux/proc_fs.h>
 #include <linux/device.h>
-#include <linux/err.h>
-#include <linux/pwm.h>
+
 #include <linux/of.h>
 #include <linux/gpio.h>
 #include <linux/platform_device.h>          /* For platform devices */
@@ -39,31 +39,10 @@
 #define err_msg(fmt, args...)       printk(USR_ERR_LEVEL TAG " (function : %s), [line : %d] "fmt"\n",__func__, __LINE__, ##args)
 
 
-#define USR_PWM_DRV_NAME                "pwm_demo"
+#define USR_PWM_DRV_NAME                "pwm_framwork_demo"
 #define USED_HRS_TIMER					1
-#define FOO_PROC_NAME                   0
-#define TRANDITIONAL_WAY				0
-
-struct dts_info {
-	unsigned int freq;
-	unsigned int plus_width;
-	unsigned int status;
-};
-
-struct pwm_dev {
-	struct devices *dev;
-	const struct pwn_ops *ops;
-	int base;
-	unsigned int npwm;
-	struct pwm_device *pwm_dev;
-	struct pwm_device * (*of_xlate)(struct pwm_chip *pc, \
-						const struct of_phandle_args *args);
-	unsigned int of_pwm_n_cells;
-	bool can_sleep;
-};
-
-/* function define start ---------------------------*/
-
-/*  function define end ---------------------------*/
+#define DEV_CREATE_FILE					1
+#define 
 
 #endif
+
