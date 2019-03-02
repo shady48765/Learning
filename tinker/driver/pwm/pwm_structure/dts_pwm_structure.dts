@@ -29,3 +29,7 @@ led_dimming: led_dimming {
 
 	pwm_status_gpio = <&gpio5 RK_PC3 GPIO_ACTIVE_HIGH>;
 };
+
+&pwm2 {
+	status = "okay";
+};

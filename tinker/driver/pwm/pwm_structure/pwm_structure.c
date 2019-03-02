@@ -23,28 +23,7 @@
 *******************************************************************************/
 #include "pwm_structure.h"
 
-/* start define struct -----------------------------------*/
 
-static struct dts_info {
-	unsigned int pin;
-
-	unsigned int period;
-	unsigned int freq;
-	pwm_polarity polarity;
-	unsigned int duty_cycle;
-};
-
-
-static struct pwm_dev {	
-	struct mutex 		lock;
-	struct pwm_chip 	chip;
-	struct dts_info 	dts_info;
-
-	int foo;
-	int bar;
-};
-
-/* end define struct -----------------------------------*/
 
 /*-------------- standard timer start ------------------------------------*/
 #if USED_HRS_TIMER
@@ -96,6 +75,12 @@ int usr_pwm_timer_init(unsigned int usr_ticks)
 }
 #endif // end #if USED_HRS_TIMER
 
+
+static inline struct pwm_info_container *to_chip(struct pwm_chip *chip)
+{
+	return container_of(chip, struct pwm_info_container, chip);
+}
+
 #if DEV_CREATE_FILE
 static ssize_t usr_show(struct device *dev, struct device_attribute *attr,
 			char *buf)
@@ -133,64 +118,51 @@ static int usr_pwm_dev_create_file(struct device * dev)
     return err;
 }
 
-static void usr_pwm_destory_sysfs(struct device * dev)
+static void usr_pwm_remove_file(struct device * dev)
 {
 	usr_msg("pwm device destory file start");
 	device_remove_file(dev, &usr_pwm_attrs);
-    return 0;
 }
 #endif      // end of #if DEV_CREATE_FILE
 
 
-static int usr_pwm_register_device(struct platform_device *pdev)
+static int get_current_clk_freq(struct pwm_chip *chip, struct platform_device *pdev)
 {
-    int ret;
-	struct pwm_dev * pwm_dev;
-	pwm_dev = platform_get_drvdata(pdev);	
-	
-    ret = alloc_chrdev_region(&pwm_dev->pwm_dev_num, 0, 1, USR_PWM_DRV_NAME);
-    if(ret < 0) {
-        err_msg("error : alloc_chrdev_region");
-        ret = -ENODEV;
-        return ret;
-    }
-	
-    pwm_dev->pwm_major_num = MAJOR(pwm_dev->pwm_dev_num);
-    usr_msg("device major number = %d", pwm_dev->pwm_major_num);
+	// pwm clock id/name has define as "pwm" in dts
+	int ret;
+	struct pwm_info_container * priv = to_chip(chip);
+	if(IS_ERR(priv)) {
+		err_msg("error : get pwm_info_container failed.");
+		return ERR_PTR(-ENODEV);
+	}
+	mutex_lock(&priv->lock);
+	/** get system pwm clock -------------------------------------------------*/
+	priv->pwm_clk = devm_clk_get(&pdev->dev, "pwm");
+	if(IS_ERR(priv->pwm_clk)) {
+		err_msg("error : in devm_clk_get failed.");
+		ret = ERR_PTR(-ENODEV);
+		goto out;
+	}
+	// usr_msg("system setted pwm source clock mini_rate = %ld, max_rate = %ld", 
+	//				priv->pwm_clk->min_rate, priv->pwm_clk->max_rate);
+	/** get system pll clock -------------------------------------------------*/
+	priv->pll_clk = devm_clk_get(&pdev->dev, "pclk");
+	if(IS_ERR(priv->pll_clk)) {
+		err_msg("error : in get APB clock failed.");
+		ret = ERR_PTR(-ENODEV);
+		goto out;
+	}
+	// usr_msg("get system APB clock mini_rate = %ld, max_rate = %ld", 
+	//				priv->pll_clk->min_rate, priv->pll_clk->max_rate);
+	mutex_unlock(&priv->lock);
+	return 0;
 
-	ret = usr_pwm_dev_create_file(&pdev->dev);
-    return ret;
+out:
+	mutex_unlock(&priv->lock);
+	return ret;
 }
 
-
-static void usr_pwm_unregister_device(struct platform_device *pdev)
-{
-    struct pwm_dev * pwm_dev;
-
-	pwm_dev = platform_get_drvdata(pdev);
-	usr_msg("usr pwm unregister start");
-	usr_pwm_destory_sysfs(&pdev->dev);
-}
-
-static int usr_pwm_request(void)
-{
-    pwm_get();
-}
-
-
-
-
-
-
-
-
-static inline struct pwm_dev *to_chip(struct pwm_chip *chip)
-{
-	return container_of(chip, struct pwm_dev, chip);
-}
-
-
-static int pwm_request(struct pwm_chip *chip, struct pwm_device *pwm)
+static int usr_pwm_request(struct pwm_chip *chip, struct pwm_device *pwm)
 {
 	/*
 	 * One may need to do some initialization when a PWM channel
@@ -200,116 +172,212 @@ static int pwm_request(struct pwm_chip *chip, struct pwm_device *pwm)
 	 *     prepare_pwm_device(struct pwm_chip *chip, pwm->hwpwm);
 	 */
 
+	int ret;
+	struct pwm_info_container * pwm_info = to_chip(chip);
+	if(IS_ERR(pwm_info)) {
+		err_msg("error : get pwm_info_container failed.");
+		return ERR_PTR(-ENODEV);
+	}
+	mutex_lock(&pwm_info->lock);
+	//struct pwm_device *pwm_request(int pwm, const char *label)
+    pwm = pwm_request(2, "pwm-dimming");
+	if(IS_ERR(pwm)) {
+		err_msg("error : get pwm_info_container failed.");
+		ret = ERR_PTR(-ENODEV);
+		goto out;
+	}
+	usr_msg("success requset pwm channel %d, label = %s, flags = %ld", pwm->pwm, pwm->label, pwm->flags);
+	pwm_info->chip.pwms = pwm;
+
+	mutex_unlock(&pwm_info->lock);
 	return 0;
+
+out:
+	mutex_unlock(&pwm_info->lock);
+	return ret;
 }
 
-static int pwm_config(struct pwm_chip *chip, struct pwm_device *pwm,
+static int usr_pwm_config(struct pwm_chip *chip, struct pwm_device *pwm,
 			       int duty_ns, int period_ns)
 {
-
     /*
      * In this function, one ne can do something like:
-     *      struct pwm_dev *priv = to_chip(chip);
+     *      struct pwm_info_container *priv = to_chip(chip);
      *
 	 *      return send_command_to_set_config(priv,
      *                      duty_ns, period_ns);
      */
 
+	int ret;
+	struct pwm_info_container *priv = to_chip(chip);
+	if(IS_ERR(priv)) {
+		err_msg("error : get pwm_info_container failed.");
+		return ERR_PTR(-ENODEV);
+	}
+
+	ret = pwm_config(priv->chip.pwms, duty_ns, period_ns);
+
+	if(ret < 0) {
+		err_msg("error : pwm_config");
+		return -EIO;
+	}
+	
 	return 0;
 }
 
-static int pwm_enable(struct pwm_chip *chip, struct pwm_device *pwm)
+static int usr_pwm_enable(struct pwm_chip *chip, struct pwm_device *pwm)
 {
     /*
      * In this function, one ne can do something like:
-     *  struct pwm_dev *priv = to_chip(chip);
+     *  struct pwm_info_container *priv = to_chip(chip);
      *
      * return foo_chip_set_pwm_enable(priv, pwm->hwpwm, true);
      */
-    
-    pr_info("Somebody enabled PWM device number %d of this chip", pwm->hwpwm);
+	int ret;
+	
+    usr_msg("Ready to enable pwm device number = %d, pwm = %d", pwm->hwpwm, pwm->pwm);
+	ret = pwm_enable(pwm);
+	if(ret < 0) {
+		err_msg("error : pwm_enable");
+		return -EIO;
+	}
 	return 0;
 }
 
-static void pwm_disable(struct pwm_chip *chip, struct pwm_device *pwm)
+static void usr_pwm_disable(struct pwm_chip *chip, struct pwm_device *pwm)
 {
     /*
      * In this function, one ne can do something like:
-     *  struct pwm_dev *priv = to_chip(chip);
+     *  struct pwm_info_container *priv = to_chip(chip);
      *
      * return foo_chip_set_pwm_enable(priv, pwm->hwpwm, false);
      */
-    
-    pr_info("Somebody disabled PWM device number %d of this chip", pwm->hwpwm);
+	
+    usr_msg("Ready to disable pwm device number = %d, pwm = %d", pwm->hwpwm, pwm->pwm);
+	pwm_disable(pwm);
 }
 
 static const struct pwm_ops pwm_ops = {
-	.request = pwm_request,
-	.config  = pwm_config,
-	.enable  = pwm_enable,
-	.disable = pwm_disable,
+	.request = usr_pwm_request,
+	.config  = usr_pwm_config,
+	.enable  = usr_pwm_enable,
+	.disable = usr_pwm_disable,
 	.owner   = THIS_MODULE,
 };
 
 
-static int read_pwm_dts_info(struct platform_device *pdev)
+static int read_pwm_dts_info(struct platform_device *pdev, struct pwm_chip * chip)
 {
-	static node 
+	int ret;
+	struct pwm_info_container * pwm_info = to_chip(chip);
+	if(IS_ERR(pwm_info)) {
+		err_msg("error : get pwm_info_container failed.");
+		return ERR_PTR(-ENODEV);
+	}
+	if(!pdev->dev.of_node) {
+		err_msg("error : read dts info, node error");
+		return -EFAULT;
+	}
+	mutex_lock(&pwm_info->lock);
+	ret = of_property_read_u32(pdev->dev.of_node, "pwm_period", &pwm_info->dts.period);
+	if(ret < 0) {
+		err_msg("error : read dts period");
+		goto out;
+	}
+	ret = of_property_read_u32(pdev->dev.of_node, "pwm_freqency", &pwm_info->dts.freq);
+	if(ret < 0) {
+		err_msg("error : read dts freq");
+		goto out;
+	}
+	ret = of_property_read_u32(pdev->dev.of_node, "pwm_polarity", &pwm_info->dts.polarity);
+	if(ret < 0) {
+		err_msg("error : read dts polarity");
+		goto out;
+	}
+	mutex_unlock(&pwm_info->lock);
+	return ret;
+out:
+	mutex_unlock(&pwm_info->lock);
+	return ret;
+}
 
-	of_find_compatible_node(struct device_node * from, const char * type, const char * compat)
+static int usr_pwm_register_device(struct platform_device *pdev)
+{
+	return 0;
+}
+
+
+static void usr_pwm_unregister_device(struct platform_device *pdev)
+{
+
+	
+#if 0
+    struct pwm_dev * pwm_dev;
+
+	pwm_dev = platform_get_drvdata(pdev);
+	usr_msg("usr pwm unregister start");
+	usr_pwm_remove(&pdev->dev);
+#endif
 }
 
 static int usr_pwm_probe(struct platform_device *pdev)
 {
     int err;
-   	struct pwm_dev * dev_info;
+   	struct pwm_info_container * dev_info;
 	
 	usr_msg("pwm driver init start");
-	dev_info = devm_kmalloc(sizeof(struct pwm_dev), GFP_KERNEL);
+	dev_info = devm_kmalloc(&pdev->dev, sizeof(struct pwm_info_container), GFP_KERNEL);
 	if(IS_ERR(dev_info)) {
 		err_msg(" err : devm_kmalloc");
 		return -ENOMEM;
 	}
-	memset(dev_info, 0, sizeof(struct pwm_dev));
+	memset(dev_info, 0, sizeof(struct pwm_info_container));
 	
     mutex_init(&dev_info->lock);
 	dev_info->chip.ops  = &pwm_ops;
 	dev_info->chip.dev  = &pdev->dev;
 	dev_info->chip.base = -1;	// Dynamic base
-	dev_info->chip.npwm = 2;	// 2 channel controller
+	dev_info->chip.npwm = 2;	// 2 channel controller / pwm2
 
-	platform_set_drvdata(pdev, dev_info);
-
+	read_pwm_dts_info(pdev, &dev_info->chip);
+	
 	err = pwmchip_add(&dev_info->chip);
 	if(err < 0) {
 		err = -ENODEV;
 		err_msg("error : pwmchip_add");
 		goto err_no1;
 	}
+	usr_pwm_dev_create_file(&pdev->dev);
+
+	platform_set_drvdata(pdev, dev_info);
 	
 	return err;
 
 
 err_no1:
-	returnr err;
+	return err;
 }
 
 static int usr_pwm_remove(struct platform_device *pdev)
 {
-	struct pwm_dev * dev_info = platform_get_drvdata(pdev);
+	struct pwm_info_container * dev_info = platform_get_drvdata(pdev);
 	usr_msg("move in usr_pwm_remove.");
-	return pwmchip_remove(&dev_info->chip);
+	usr_pwm_remove_file(&pdev->dev);
+	pwmchip_remove(&dev_info->chip);
+	return 0;
 }
 
 static int usr_pwm_suspend(struct platform_device * pdev, pm_message_t state)
 {
     usr_msg("move in usr_pwm_suspend.");
+	/** TODO */
     return 0;
 }
 
 static int usr_pwm_resume(struct platform_device * pdev)
 {
 	usr_msg("move in usr_pwm_resume.");
+	/** TODO */
     return 0;
 }
 
@@ -318,15 +386,15 @@ static const struct of_device_id usr_pwm_match_table[] = {
 	{.compatible = "pwm-dimming",},
     {/** keep this */},
 };
-MODULE_DEVICE_TABLE(of, usr_pwm_match_table);
+// MODULE_DEVICE_TABLE(of, usr_pwm_match_table);
 
 static const struct platform_device_id usr_pwm_dev_id[] = {
     {"usr_pwm", 0},
     {/*keep this*/}
 };
-MODULE_DEVICE_TABLE(usr_pwm, usr_pwm_dev_id);
+MODULE_DEVICE_TABLE(pwm, usr_pwm_dev_id);
 
-struct platform_driver usr_pwm_drv = {
+struct platform_driver drv_dimming = {
 	.driver = {
 		.owner          = THIS_MODULE,
 		.name           = USR_PWM_DRV_NAME,
@@ -339,7 +407,7 @@ struct platform_driver usr_pwm_drv = {
 	.resume   = usr_pwm_resume,
 };
 
-module_platform_driver(usr_pwm_drv);
+module_platform_driver(drv_dimming);
 
 MODULE_LICENSE("GPL");
 MODULE_AUTHOR("quan");

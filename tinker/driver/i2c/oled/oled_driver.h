@@ -107,7 +107,7 @@ extern struct _oled_dts_info * oled_dts_info;
 struct _oled_i2c_info {
 	struct i2c_client 	* oled_client;
 	char 				* data;
-    struct mutex        oled_i2c_lock;
+    struct mutex        i2c_lock;
     struct i2c_msg		oled_i2c_msg;
 };
 

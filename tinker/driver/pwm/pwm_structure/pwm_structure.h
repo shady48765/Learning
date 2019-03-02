@@ -31,6 +31,7 @@
 #include <linux/mutex.h>
 #include <linux/time.h>
 #include <linux/pwm.h>
+#include <linux/clk.h>      // get clock freq
 
 #define TAG                   		" <PWM> "
 #define USR_MSG_LEVEL               KERN_WARNING
@@ -42,7 +43,28 @@
 #define USR_PWM_DRV_NAME                "pwm_framwork_demo"
 #define USED_HRS_TIMER					1
 #define DEV_CREATE_FILE					1
-#define 
+
+/* start define struct -----------------------------------*/
+
+static struct dts_info {
+	unsigned int pin;
+
+	unsigned int period;
+	unsigned int freq;
+	unsigned int polarity;
+	unsigned int duty_cycle;
+};
+
+
+static struct pwm_info_container {	
+	struct mutex 		lock;
+	struct pwm_chip 	chip;
+	struct dts_info 	dts;
+	struct clk			*pwm_clk;
+	struct clk 			*pll_clk;
+};
+
+/* end define struct -----------------------------------*/
 
 #endif
 

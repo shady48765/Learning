@@ -183,9 +183,9 @@ int oled_i2c_send_byte(struct i2c_client *client, unsigned char sub_addr, unsign
 	msg.flags 	= WRITE_FLAG;
 	msg.buf 	= temp;
 
-    mutex_lock(&oled_i2c_info->oled_i2c_lock);
+    mutex_lock(&oled_i2c_info->i2c_lock);
     ret = i2c_transfer(client->adapter, &msg, 1);
-    mutex_unlock(&oled_i2c_info->oled_i2c_lock);
+    mutex_unlock(&oled_i2c_info->i2c_lock);
     usr_msg("---> sub_addr = 0x%x, data = 0x%x", sub_addr, data);
     memset(temp, 0, sizeof(temp));
     return ret;
@@ -194,17 +194,23 @@ int oled_i2c_send_byte(struct i2c_client *client, unsigned char sub_addr, unsign
 int oled_i2c_send_byte(struct i2c_client *client, unsigned char sub_addr, unsigned char data)
 {
 	int ret;
+	unsigned short send_mark;
     
-#if 0
-	mutex_lock(&oled_i2c_info->oled_i2c_lock);
-	do {
-        err_msg("ready to sent sub_addr = 0x%x, data = 0x%x", sub_addr, data);
-        ret = i2c_smbus_write_byte_data(client, sub_addr, data);
-    } while(ret > 0);
-	mutex_unlock(&oled_i2c_info->oled_i2c_lock);
-#elif 0
-	err_msg("ready to sent sub_addr = 0x%x, data = 0x%x", sub_addr, data);
-    ret = i2c_smbus_write_byte_data(client, sub_addr, data);
+#if 1
+
+    struct i2c_msg msg;
+	struct i2c_adapter *adap=client->adapter;
+	char msg_buff[]; = {sub_addr, data};
+
+	send_mark = 0;
+    msg.addr = client->addr;
+    msg.flags = client->flags & send_mark;
+    msg.len = 2;
+    msg.buf = msg_buff;
+	
+    ret = i2c_transfer(adap, &msg, 1); 
+    //kfree(msg_buff);
+	
 #else
     char buff[2] = {sub_addr, data};
     usr_msg("ready to sent client_addr = 0x%x, sub_addr = 0x%x, data = 0x%x", client->addr, sub_addr, data);
@@ -230,9 +236,9 @@ int oled_i2c_send_matrix(struct i2c_client * client, unsigned char sub_addr, uns
     msg[0].flags = 0;                    /* Write */
     msg[0].len = length + 1; /* Address is 1 bytes coded */
     msg[0].buf = tmp;
-    mutex_lock(&oled_i2c_info->oled_i2c_lock);
+    mutex_lock(&oled_i2c_info->i2c_lock);
     ret = i2c_transfer(client->adapter , msg, ARRAY_SIZE(msg));
-    mutex_unlock(&oled_i2c_info->oled_i2c_lock);
+    mutex_unlock(&oled_i2c_info->i2c_lock);
 	return ((ret > 0) ? ret : -ENOMSG);
 }
 /* i2c transmit function end ----------------------------------------------------------*/
@@ -273,7 +279,7 @@ static int oled_i2c_probe(struct i2c_client * client, const struct i2c_device_id
 	}
 
 	oled_i2c_info->oled_client = client;
-    mutex_init(&oled_i2c_info->oled_i2c_lock);
+    mutex_init(&oled_i2c_info->i2c_lock);
     // no need for global prameter
     // i2c_set_clientdata(client, oled_i2c_info);
 	ret = register_oled_driver();
@@ -307,7 +313,7 @@ static int oled_i2c_remove(struct i2c_client *client)
     usr_msg("timer_jiffy exit success");
 #endif
     usr_msg("i2c driver remove");
-    mutex_destroy(&oled_i2c_info->oled_i2c_lock);
+    mutex_destroy(&oled_i2c_info->i2c_lock);
     gpio_free(oled_dts_info->oled_rst_pin);
     device_destroy(oled_dev_info->oled_class, oled_dev_info->oled_devno);
     class_destroy(oled_dev_info->oled_class);
