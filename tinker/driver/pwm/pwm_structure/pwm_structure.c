@@ -257,11 +257,19 @@ static void usr_pwm_disable(struct pwm_chip *chip, struct pwm_device *pwm)
 	pwm_disable(pwm);
 }
 
+static int usr_pwm_capture(struct pwm_chip *chip, struct pwm_device *pwm,
+		       struct pwm_capture *result, unsigned long timeout)
+{
+	usr_msg("pwm capture");
+	return 0;
+}
+
 static const struct pwm_ops pwm_ops = {
 	.request = usr_pwm_request,
 	.config  = usr_pwm_config,
 	.enable  = usr_pwm_enable,
 	.disable = usr_pwm_disable,
+	.capture = usr_pwm_capture,
 	.owner   = THIS_MODULE,
 };
 

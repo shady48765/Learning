@@ -1,0 +1,23 @@
+/**
+  * @Description: key input dts set
+  * @Attention: make sure the irq configuration
+  *
+  */
+
+key_trigger: key_trigger {
+  	compatible = "usr_key_input";
+    status = "okay";
+    label = "usr_key";
+    
+    interrupt-parent = <&gpio6>;
+    interrupts = <<GIC_SPI 64 IRQ_TYPE_LEVEL_HIGH>;
+    pinctrl-name = "default";
+    pinctrl-0 = <&key_set_input>;
+};
+
+&pinctrl {
+    // GPIO6A1
+    key_set_input: key-set-input {
+        pins = <RK_GPIO6 RK_PA1 RK_FUNC_GPIO &pcfg_pull_up>;
+    };
+};
