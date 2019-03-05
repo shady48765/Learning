@@ -15,14 +15,14 @@
 
 #define MS_TO_NS(x) (x * 1E6L)      // ms to ns
 
-static ktime_t  tm_period;
+static ktime_t  tim_period;
 
 
 static enum hrtimer_restart foo_hrtimer_callback(struct hrtimer * arg)
 {
     ktime_t now = arg->base->get_time();
     usr_msg("timer running at jiffies=%ld\n", jiffies);
-    hrtimer_forward(arg, now, tm_period);
+    hrtimer_forward(arg, now, tim_period);
     return HRTIMER_RESTART;
 }
 
@@ -33,10 +33,10 @@ int foo_timer_init(void)
 
     mutex_lock(&foo_mutex);
     // ktime_set(const s64 secs, const unsigned long nsecs); // param1: second, param2:nanosecond
-    tm_period = ktime_set(0, MS_TO_NS(1000));     // set 1second, 1000 nanosecond.
+    tim_period = ktime_set(0, MS_TO_NS(1000));     // set 1second, 1000 nanosecond.
     hrtimer_init(&foo_timer, CLOCK_REALTIME, HRTIMER_MODE_REL);
     foo_timer.function = foo_hrtimer_callback;
-    hrtimer_start(&foo_timer, tm_period, HRTIMER_MODE_REL);
+    hrtimer_start(&foo_timer, tim_period, HRTIMER_MODE_REL);
     mutex_unlock(&foo_mutex);
 
 
