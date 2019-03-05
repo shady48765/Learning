@@ -45,7 +45,6 @@ static enum hrtimer_restart foo_hrtimer_callback(struct hrtimer * arg)
 	if(IS_ERR(tim_info)) {
 		err_msg("error : get struct timer_info address faild");
 	}
-	usr_msg("take struct frome container success");
     now = arg->base->get_time();
     hrtimer_forward(arg, now, tim_info->tim_period);
     loop_counter++;
@@ -67,18 +66,11 @@ static void foo_timer_init(struct timer_info * tim_info, unsigned int micro_seco
 	usr_msg("hrs_timer init");
 	mutex_lock(&tim_info->tim_lock);
     // ktime_set(const s64 secs, const unsigned long nsecs); // param1: second, param2:nanosecond
-    err_msg("-------------- 1 ----------------");
     tim_info->tim_period = ktime_set(0, MS_TO_NS(micro_seconds));     	
-    err_msg("-------------- 2 ----------------");
     hrtimer_init(&tim_info->tim, CLOCK_REALTIME, HRTIMER_MODE_REL);
-    err_msg("-------------- 3 ----------------");
     tim_info->tim.function = foo_hrtimer_callback;
-    err_msg("-------------- 4 ----------------");
     hrtimer_start(&tim_info->tim, tim_info->tim_period, HRTIMER_MODE_REL);
-    err_msg("-------------- 5 ----------------");
     mutex_unlock(&tim_info->tim_lock);
-    err_msg("-------------- 6 ----------------");
-
 }
 
 static ssize_t foo_show(struct device *dev, struct device_attribute *attr, char *buf)
@@ -138,7 +130,7 @@ static int foo_probe(struct platform_device * pdev)
 	mutex_init(&tim_info->tim_lock);
 	foo_timer_init(tim_info, 1000);
 
-	foo_create_sysfs(&pdev->dev, &dev_attr);
+	err = foo_create_sysfs(&pdev->dev, &dev_attr);
 
 	platform_set_drvdata(pdev, tim_info);
 
@@ -165,7 +157,6 @@ static int foo_remove(struct platform_device *pdev)
 			err_msg("timer : timer ready to cancel");
 		}
 	}while(ret);
-
 	
 	return ret;
 }
@@ -179,28 +170,17 @@ static struct platform_driver foo_platform_drv = {
 	.remove = foo_remove,
 };
 
-static struct platform_device foo_platform_dev = {
-	.name = FOO_DEV_NAME,
-	.id = -1,
-};
+
 
 static int __init foo_sysfs_init(void)
 {
 	int ret;
 	
 	// show_jiffies();
-	usr_msg("start regiter platform device and driver.");
-	ret = platform_device_register(&foo_platform_dev);
-	if(ret < 0)
-		goto out;
-    
+    usr_msg("start regiter platform driver.");
 	ret = platform_driver_register(&foo_platform_drv);
 	if(ret < 0)
-		goto out;
-	
-	return ret;
-
-out:
+		err_msg("error : platform device register");
 	return ret;
 }
 
@@ -209,7 +189,6 @@ static void __exit foo_sysfs_exit(void)
 {
 	usr_msg("ready to remove driver: %s", FOO_DEV_NAME);
 	platform_driver_unregister(&foo_platform_drv);
-	// platform_device_unregister(&foo_platform_dev);
 }
 
 module_init(foo_sysfs_init);
