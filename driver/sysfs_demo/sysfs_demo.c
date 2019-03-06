@@ -28,6 +28,7 @@ struct timer_info {
 // dynamically hrtimer ticks, for millisecond
 static unsigned int ticks = 0;
 static unsigned int loop_counter = 0;
+
 /**
  * get strcut timer_info start address
  * @param  tim [description]
@@ -65,6 +66,12 @@ static enum hrtimer_restart foo_hrtimer_callback(struct hrtimer * arg)
     return HRTIMER_RESTART;
 }
 
+/**
+ * @brief init hrtimer
+ * 
+ * @param struct of timer parameter 
+ * @param delay ticks micro_seconds 
+ */
 static void foo_timer_init(struct timer_info * tim_info, unsigned int micro_seconds)
 {
 
@@ -78,7 +85,7 @@ static void foo_timer_init(struct timer_info * tim_info, unsigned int micro_seco
     tim_info->tim_period = ktime_set(0, MS_TO_NS(micro_seconds));     	
     hrtimer_init(&tim_info->tim, CLOCK_REALTIME, HRTIMER_MODE_REL);
     tim_info->tim.function = foo_hrtimer_callback;
-	tim_info->tim_ticks = micro_seconds;
+	tim_info->tim_ticks    = micro_seconds;
     hrtimer_start(&tim_info->tim, tim_info->tim_period, HRTIMER_MODE_REL);
     mutex_unlock(&tim_info->tim_lock);
 }
@@ -87,7 +94,6 @@ static void foo_timer_init(struct timer_info * tim_info, unsigned int micro_seco
 static ssize_t foo_show(struct device *dev, struct device_attribute *attr, char *buf)
 {
 	usr_msg("show : %s", __func__);
-	
 	return 0; 
 }
 
@@ -101,9 +107,9 @@ static ssize_t foo_close(struct device *dev, struct device_attribute *attr,
 static struct device_attribute  dev_attr = {
 	.attr = {
 		.name = FOO_DEV_NAME,
-		.mode=  0664,
+		.mode = 0664,
 	},
-	.show = foo_show,
+	.show  = foo_show,
 	.store = foo_close,
 };
 #endif /** end of #if DEVICE_CREATE_FILE */
@@ -119,13 +125,13 @@ struct d_attr {
 };
 
 static struct d_attr data_show = {
-    .attr.name="read_loops",
+    .attr.name = "read_loops",
     .attr.mode = 0644,
     .value = 0,
 };
 
 static struct d_attr data_write = {
-    .attr.name="change_ticks",
+    .attr.name = "change_ticks",
     .attr.mode = 0644,
     .value = 0,
 };
@@ -156,16 +162,22 @@ static ssize_t store(struct kobject *kobj, struct attribute *attr, const char *b
 }
 
 static struct sysfs_ops ops = {
-    .show = show,
+    .show  = show,
     .store = store,
 };
 
 static struct kobj_type k_type = {
-    .sysfs_ops = &ops,
+    .sysfs_ops     = &ops,
     .default_attrs = attrs,
 };
 #endif /** end of #if DIRECT_CREATE_SYSFS */
 
+/**
+ * @brief create sysfs
+ * 
+ * @param platform device if using device_create_file
+ * @return 0 for success, !0 for failed 
+ */
 static int foo_create_sysfs(struct device * dev)
 {
 	int ret;
@@ -178,8 +190,9 @@ static int foo_create_sysfs(struct device * dev)
 	}
 	// kobject_init(struct kobject * kobj, struct kobj_type * ktype)
 	kobject_init(foo_kobject, &k_type);
+     // parent is NULL, create folder under /sys/ direction
     ret = kobject_add(foo_kobject, NULL, "%s", FOO_DEV_NAME);
-	if(0  != ret ) {
+	if(0 != ret ) {
 		ret = -1;
 		err_msg("error: kobject_add() failed\n");
 		kobject_put(foo_kobject);
@@ -192,21 +205,26 @@ static int foo_create_sysfs(struct device * dev)
 	ret = device_create_file(dev, attr);
 	if(ret < 0) {
 		err_msg("error : create sysfs");
+        goto out;
 	}
-#endif /** end of #if DIRECT_CREATE_SYSFS */
-
+#endif /** end of #if DEVICE_CREATE_FILE */
 
 	return ret;
 out:
 	return ret;
 }
 
+/**
+ * @brief delete created sysfs, when driver removed
+ * 
+ * @param dev 
+ */
 static void foo_remove_sysfs(struct device * dev)
 {
 	usr_msg("remove sysfs");
 #if DEVICE_CREATE_FILE
 	device_remove_file(dev, attr);
-#endif /** end of #if DIRECT_CREATE_SYSFS */
+#endif /** end of #if DEVICE_CREATE_FILE */
 
 #if DIRECT_CREATE_SYSFS
 	kobject_put(foo_kobject);
@@ -260,10 +278,10 @@ static int foo_remove(struct platform_device *pdev)
 
 static struct platform_driver foo_platform_drv = {
 	.driver = {
-		.name = FOO_DEV_NAME,
+		.name  = FOO_DEV_NAME,
 		.owner = THIS_MODULE,
 	},
-	.probe = foo_probe,
+	.probe  = foo_probe,
 	.remove = foo_remove,
 };
 

@@ -24,7 +24,7 @@ kernel_modules:
 	@echo "---> build finished."
 app:
 	@echo "---> make application ${APPLICATION_NAME}"
-	$(CC) -o ${APPLICATION_NAME} ${APPLICATION_NAME}.c
+	$(CC) -o ${APPLICATION_NAME} ${APPLICATION_NAME}.c -lpthread
 cleanall:
 	make -C /lib/modules/$(KVERS)/build M=$(CURDIR) clean
 	rm -rvf .*.?.sw?p 

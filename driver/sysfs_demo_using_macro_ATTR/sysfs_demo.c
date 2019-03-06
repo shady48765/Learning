@@ -156,12 +156,12 @@ static ssize_t store(struct kobject *kobj, struct attribute *attr, const char *b
 }
 
 static struct sysfs_ops ops = {
-    .show = show,
+    .show  = show,
     .store = store,
 };
 
 static struct kobj_type k_type = {
-    .sysfs_ops = &ops,
+    .sysfs_ops     = &ops,
     .default_attrs = attrs,
 };
 #endif /** end of #if DIRECT_CREATE_SYSFS */
@@ -193,7 +193,7 @@ static int foo_create_sysfs(struct device * dev)
 	if(ret < 0) {
 		err_msg("error : create sysfs");
 	}
-#endif /** end of #if DIRECT_CREATE_SYSFS */
+#endif /** end of #if DEVICE_CREATE_FILE */
 
 
 	return ret;
@@ -206,7 +206,7 @@ static void foo_remove_sysfs(struct device * dev)
 	usr_msg("remove sysfs");
 #if DEVICE_CREATE_FILE
 	device_remove_file(dev, attr);
-#endif /** end of #if DIRECT_CREATE_SYSFS */
+#endif /** end of #if DEVICE_CREATE_FILE */
 
 #if DIRECT_CREATE_SYSFS
 	kobject_put(foo_kobject);
@@ -291,4 +291,3 @@ module_exit(foo_sysfs_exit);
 MODULE_LICENSE("GPL");
 MODULE_AUTHOR("V");
 MODULE_DESCRIPTION("sysfs demo.");
-
