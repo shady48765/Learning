@@ -5,9 +5,9 @@
   */
 
 key_trigger: key_trigger {
-  	compatible = "usr_key_input";
+  	compatible = "usr-key";
     status = "okay";
-    label = "usr_key";
+    label = "customer-key";
     
     interrupt-parent = <&gpio6>;
     interrupts = <<GIC_SPI 64 IRQ_TYPE_LEVEL_HIGH>;

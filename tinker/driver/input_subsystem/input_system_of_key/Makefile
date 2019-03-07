@@ -54,6 +54,6 @@ remove:
 	@echo "---> remove module ${MODULE_NAME}_module"
 	$(shell sudo rmmod ${MODULE_NAME}_module)
 
-.PHONY: modules cleanall clean install remove
+.PHONY: modules app cleanall clean install remove
 endif
 #-------------------- END LINE --------------------------

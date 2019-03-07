@@ -3,7 +3,7 @@
 
 ifneq ($(KERNELRELEASE),)
 	MODULE_NAME = key_input
-	${MODULE_NAME}_module-objs := 	key_input.o
+	${MODULE_NAME}_module-objs := key_input.o
 	obj-m := ${MODULE_NAME}_module.o
 
 else

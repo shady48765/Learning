@@ -12,6 +12,10 @@
 #define SYSFS_READ_PATH             "/sys/foo_sysfs/read_loops"
 
 
+pthread_mutex_t thead_mutex = PTHREAD_MUTEX_INITIALIZER; 
+
+
+
 typedef struct {
     char * write_file_name;
     char * read_file_name;
@@ -19,8 +23,8 @@ typedef struct {
 }file_info;
 
 file_info file_path = {
-    .write_file_name = WRITE_FILE_NAME,
-    .read_file_name = READ_FILE_NAME,
+    .write_file_name   = WRITE_FILE_NAME,
+    .read_file_name    = READ_FILE_NAME,
     .sysfs_folder_path = SYSFS_PATH,
 };
 
@@ -88,7 +92,8 @@ void *thread_function(void * args)
 
 int main(int argv, char **argc)
 {
-    int ret = 0;
+    int ret = -1;
+    int err = -1;
     char buff[1024] = {'\0'};
     
     if(argv !=  2) {
@@ -102,26 +107,32 @@ int main(int argv, char **argc)
         err_printf("error : malloc usr_operations");
         return -1;
     }
-    ops->read_flag = 0;
+    ops->read_flag  = 0;
     ops->write_flag = 0;
     ops->thread_exit_flag = 0;
     
     // create thread to analysis input paramter format and information
-    ops->thread_id = pthread_create(&ops->thread_id, NULL, thread_function, (void *)ops);
-    input_paramter_check(buff);
-    do {
-        printf("which operations youn need: ");
+    printf("which operations you need: ");
+    do { 
         ret = scanf("%[^\n]", buff);
-        if(ret < 2) {   // mo input parameter
+        if(ret < 1) {
+            continue;
+        } else if(ret < 2) {   // mo input parameter
+            memset(buff, '\0', sizeof(buff)); 
+            printf("input error, redo input.\n");   
             continue;
         }
-        ret = input_paramter_check(buff);
-        if(ret < 0) {
+        printf("\n input parameter is : \n", buff);
+        err = input_paramter_check(buff);
+        if(err < 0) {
             err_printf("input format");
             memset(buff, '\0', sizeof(buff));
         }
-    }while(0 != ret);
+        sleep(2);
+    }while(err < 0);
     
+    ops->thread_id = pthread_create(&ops->thread_id, NULL, thread_function, (void *)ops);
+
     
     
     
