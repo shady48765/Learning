@@ -111,17 +111,17 @@ depend:
 .PHONY : depend
 
 #=============================================================================
-# Target rules for targets named demo_1
+# Target rules for targets named demo
 
 # Build rule for target.
-demo_1: cmake_check_build_system
-	$(MAKE) -f CMakeFiles/Makefile2 demo_1
-.PHONY : demo_1
+demo: cmake_check_build_system
+	$(MAKE) -f CMakeFiles/Makefile2 demo
+.PHONY : demo
 
 # fast build rule for target.
-demo_1/fast:
-	$(MAKE) -f CMakeFiles/demo_1.dir/build.make CMakeFiles/demo_1.dir/build
-.PHONY : demo_1/fast
+demo/fast:
+	$(MAKE) -f CMakeFiles/demo.dir/build.make CMakeFiles/demo.dir/build
+.PHONY : demo/fast
 
 demo.o: demo.c.o
 
@@ -129,7 +129,7 @@ demo.o: demo.c.o
 
 # target to build an object file
 demo.c.o:
-	$(MAKE) -f CMakeFiles/demo_1.dir/build.make CMakeFiles/demo_1.dir/demo.c.o
+	$(MAKE) -f CMakeFiles/demo.dir/build.make CMakeFiles/demo.dir/demo.c.o
 .PHONY : demo.c.o
 
 demo.i: demo.c.i
@@ -138,7 +138,7 @@ demo.i: demo.c.i
 
 # target to preprocess a source file
 demo.c.i:
-	$(MAKE) -f CMakeFiles/demo_1.dir/build.make CMakeFiles/demo_1.dir/demo.c.i
+	$(MAKE) -f CMakeFiles/demo.dir/build.make CMakeFiles/demo.dir/demo.c.i
 .PHONY : demo.c.i
 
 demo.s: demo.c.s
@@ -147,7 +147,7 @@ demo.s: demo.c.s
 
 # target to generate assembly for a file
 demo.c.s:
-	$(MAKE) -f CMakeFiles/demo_1.dir/build.make CMakeFiles/demo_1.dir/demo.c.s
+	$(MAKE) -f CMakeFiles/demo.dir/build.make CMakeFiles/demo.dir/demo.c.s
 .PHONY : demo.c.s
 
 # Help Target
@@ -157,7 +157,7 @@ help:
 	@echo "... clean"
 	@echo "... depend"
 	@echo "... rebuild_cache"
-	@echo "... demo_1"
+	@echo "... demo"
 	@echo "... edit_cache"
 	@echo "... demo.o"
 	@echo "... demo.i"
