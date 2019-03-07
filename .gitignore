@@ -42,3 +42,9 @@ cmake-build-debug
 *.order
 *.symvers
 .*.ko.cmd
+# cmake
+CMakeFiles
+CMakeCache.txt
+cmake_install.cmake
+
+
