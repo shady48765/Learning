@@ -8,7 +8,8 @@
 key_trigger {
     compatible = "usr-key";
     label = "customer-key";
-
+    
+    // 继承 gpio5的共享中断，并定义引脚为中断，继承自gpio5
     interrupt-parent = <&gpio5>;
     interrupts = <&gpio5 RK_PB4 IRQ_TYPE_LEVEL_LOW>;
     debounce-interval = <50>;
