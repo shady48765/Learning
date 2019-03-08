@@ -3,21 +3,45 @@
   * @Attention: make sure the irq configuration
   *
   */
-
-key_trigger: key_trigger {
-  	compatible = "usr-key";
-    status = "okay";
+  
+    // GPIO5B4
+key_trigger {
+    compatible = "usr-key";
     label = "customer-key";
+
+    interrupt-parent = <&gpio5>;
+    interrupts = <&gpio5 RK_PB4 IRQ_TYPE_LEVEL_LOW>;
+    debounce-interval = <50>;
     
-    interrupt-parent = <&gpio6>;
-    interrupts = <<GIC_SPI 64 IRQ_TYPE_LEVEL_HIGH>;
     pinctrl-name = "default";
     pinctrl-0 = <&key_set_input>;
+    status = "okay";
+};
+
+// disable uart4 cts and rts pin
+&uart4 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&uart4_xfer>;// , <&uart4_cts>, <&uart4_rts>;
+	status = "disabled";
+    
 };
 
 &pinctrl {
-    // GPIO6A1
-    key_set_input: key-set-input {
-        pins = <RK_GPIO6 RK_PA1 RK_FUNC_GPIO &pcfg_pull_up>;
+    // GPIO5B4
+    user_key {
+        key_set_input: key-set-input {
+            // rockchip.h 中没有定义 RK_GPIO5, 用 RK_GPIO5 报错
+           // rockchip,pins = <RK_GPIO5 RK_PB4 RK_FUNC_GPIO &pcfg_pull_up>;
+            rockchip,pins = <5 12 RK_FUNC_GPIO &pcfg_pull_up>;
+        };
+    };
+    
+    uart4 {
+        uart4_xfer: uart4-xfer {
+            rockchip,pins = <5 15 3 &pcfg_pull_up>,
+                    <5 14 3 &pcfg_pull_none>;
+        };
+        //disable usart4-cts and uart4-rts, configurate none
     };
 };
+

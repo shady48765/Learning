@@ -60,7 +60,11 @@
 
 /* start define struct -----------------------------------*/
 struct dts_information {
-	struct device_node	* node;
+	struct pinctrl 			* node;
+	struct pinctrl_state 	* state;
+	struct mutex			pin_lock;
+	struct device_node 		* dev_node;
+	unsigned int 					irq_no;
 };
 
 struct timer_information {

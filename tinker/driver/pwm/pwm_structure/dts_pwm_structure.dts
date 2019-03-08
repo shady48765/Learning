@@ -1,35 +1,73 @@
-led_dimming: led_dimming {
-	compatible = "pwm-dimming";
-    status = "okay";
-	// pwm: pwm2; index: 0; period: 10000ns; pwm_polarity: 0
-	// pwm_polarity : 0 --> positive, 1 --> negative
-	// perioid = 25000ns = ((1 / 25000) * 1E9) = 40KHZ
-	pwm_config = <&pwm2 0 25000 0>;
+    //pwm2 ---> GP7C6,  Disable usart2
+    point_pwm {
+        status = "okay";
+        // GPIO5B5
+        pwm_status_gpio = <&gpio5 RK_PB5 GPIO_ACTIVE_HIGH>;
+        
+        led_dimming {
+            compatible = "led-dimming";
+            
+            // pwm: pwm2; index: 0; period: 10000ns; pwm_polarity: 0
+            // pwm_polarity : 0 --> positive, 1 --> negative
+            // perioid = 25000ns = ((1 / 25000) * 1E9) = 40KHZ
+            pwm_config = <&pwm2 0 25000 0>;
+            
+            pwm_period = <25000>;
+            pwm_freqency = <40000>;
+            pwm_polarity = <0>;
+
+            pwm_duty_cycle_percent = <
+                0 1 2 3 4 5 6 7 
+                8 9 10 11 12 13 14 15 
+                16 17 18 19 20 21 22 23
+                24 25 26 27 28 29 30 31 
+                32 33 34 35 36 37 38 39 
+                40 41 42 43 44 45 46 47
+                48 49 50 51 52 53 54 55 
+                56 57 58 59 60 61 62 63
+                64 65 66 67 68 69 70 71 
+                72 73 74 75 76 77 78 79 
+                80 81 82 83 84 85 86 87 
+                88 89 90 91 92 93 94 95 
+                96 97 98 99
+            >;
+            default_pwm_duty_cycle = <50>;            
+            status = "okay";
+        };
+        pwm3_demo {
+            compatible = "pwm3-demo";
+            
+            // pwm: pwm2; index: 0; period: 10000ns; pwm_polarity: 0
+            // pwm_polarity : 0 --> positive, 1 --> negative
+            // perioid = 25000ns = ((1 / 25000) * 1E9) = 40KHZ
+            pwm_config = <&pwm3 0 25000 0>;
+            
+            pwm_period = <25000>;
+            pwm_freqency = <40000>;
+            pwm_polarity = <0>;
+
+            pwm_duty_cycle_percent = <
+                0 1 2 3 4 5 6 7 
+                8 9 10 11 12 13 14 15 
+                16 17 18 19 20 21 22 23
+                24 25 26 27 28 29 30 31 
+                32 33 34 35 36 37 38 39 
+                40 41 42 43 44 45 46 47
+                48 49 50 51 52 53 54 55 
+                56 57 58 59 60 61 62 63
+                64 65 66 67 68 69 70 71 
+                72 73 74 75 76 77 78 79 
+                80 81 82 83 84 85 86 87 
+                88 89 90 91 92 93 94 95 
+                96 97 98 99
+            >;
+            default_pwm_duty_cycle = <50>;
+            status = "okay";
+        };
+    };
     
-    pwm_period = <25000>;
-    pwm_freqency = <40000>;
-    pwm_polarity = <0>;
-
-	pwm_duty_cycle_percent = <
-		0 1 2 3 4 5 6 7 
-		8 9 10 11 12 13 14 15 
-		16 17 18 19 20 21 22 23
-		24 25 26 27 28 29 30 31 
-		32 33 34 35 36 37 38 39 
-		40 41 42 43 44 45 46 47
-		48 49 50 51 52 53 54 55 
-		56 57 58 59 60 61 62 63
-		64 65 66 67 68 69 70 71 
-		72 73 74 75 76 77 78 79 
-		80 81 82 83 84 85 86 87 
-		88 89 90 91 92 93 94 95 
-		96 97 98 99
-	>;
-	default_pwm_duty_cycle = <50>;
-
-	pwm_status_gpio = <&gpio5 RK_PC3 GPIO_ACTIVE_HIGH>;
+// disabled for pwm2 and pwm3
+&uart2 {
+	status = "disabled";
 };
 
-&pwm2 {
-	status = "okay";
-};

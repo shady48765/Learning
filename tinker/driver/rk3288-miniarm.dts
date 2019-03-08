@@ -46,9 +46,9 @@
 
 / {
 	compatible = "rockchip,rk3288-miniarm", "rockchip,rk3288";
-        model = "                                ";
+        model = "        ";
         copyright = "ASUS";
-        system-id = "                                "; /*For ASUS PPID*/
+        system-id = "    "; /*For ASUS PPID*/
 
 	ion {
 		compatible = "rockchip,ion";
@@ -187,15 +187,86 @@
 		laser-off = <&gpio5 RK_PC3 GPIO_ACTIVE_LOW>;
 		status = "okay";
 	};
-    oled-status {
-            compatible = "oled-pins";
-            label = "oled-status-pins";
-            pinctrl-name = "default",
-                            "oled_status_high";
-            // GPIO6A1
-            pinctrl-0 = <&oled_status_set_low>;
-            pinctrl-1 = <&oled_status_set_high>;
+    // GPIO5B4
+    key_trigger {
+        compatible = "usr-key";
+        label = "customer-key";
+
+        interrupt-parent = <&gpio5>;
+        interrupts = <&gpio5 RK_PB4 IRQ_TYPE_LEVEL_LOW>;
+        debounce-interval = <50>;
+        
+        pinctrl-name = "default";
+        pinctrl-0 = <&key_set_input>;
+        status = "okay";
+    };
+    
+    //pwm2 ---> GP7C6,  Disable usart2
+    point_pwm {
+        status = "okay";
+        // GPIO5B5
+        pwm_status_gpio = <&gpio5 RK_PB5 GPIO_ACTIVE_HIGH>;
+        
+        led_dimming {
+            compatible = "led-dimming";
+            
+            // pwm: pwm2; index: 0; period: 10000ns; pwm_polarity: 0
+            // pwm_polarity : 0 --> positive, 1 --> negative
+            // perioid = 25000ns = ((1 / 25000) * 1E9) = 40KHZ
+            pwm_config = <&pwm2 0 25000 0>;
+            
+            pwm_period = <25000>;
+            pwm_freqency = <40000>;
+            pwm_polarity = <0>;
+
+            pwm_duty_cycle_percent = <
+                0 1 2 3 4 5 6 7 
+                8 9 10 11 12 13 14 15 
+                16 17 18 19 20 21 22 23
+                24 25 26 27 28 29 30 31 
+                32 33 34 35 36 37 38 39 
+                40 41 42 43 44 45 46 47
+                48 49 50 51 52 53 54 55 
+                56 57 58 59 60 61 62 63
+                64 65 66 67 68 69 70 71 
+                72 73 74 75 76 77 78 79 
+                80 81 82 83 84 85 86 87 
+                88 89 90 91 92 93 94 95 
+                96 97 98 99
+            >;
+            default_pwm_duty_cycle = <50>;            
             status = "okay";
+        };
+        pwm3_demo {
+            compatible = "pwm3-demo";
+            
+            // pwm: pwm2; index: 0; period: 10000ns; pwm_polarity: 0
+            // pwm_polarity : 0 --> positive, 1 --> negative
+            // perioid = 25000ns = ((1 / 25000) * 1E9) = 40KHZ
+            pwm_config = <&pwm3 0 25000 0>;
+            
+            pwm_period = <25000>;
+            pwm_freqency = <40000>;
+            pwm_polarity = <0>;
+
+            pwm_duty_cycle_percent = <
+                0 1 2 3 4 5 6 7 
+                8 9 10 11 12 13 14 15 
+                16 17 18 19 20 21 22 23
+                24 25 26 27 28 29 30 31 
+                32 33 34 35 36 37 38 39 
+                40 41 42 43 44 45 46 47
+                48 49 50 51 52 53 54 55 
+                56 57 58 59 60 61 62 63
+                64 65 66 67 68 69 70 71 
+                72 73 74 75 76 77 78 79 
+                80 81 82 83 84 85 86 87 
+                88 89 90 91 92 93 94 95 
+                96 97 98 99
+            >;
+            default_pwm_duty_cycle = <50>;
+            status = "okay";
+        };
     };
 
 	sound-simple-card {
@@ -544,18 +615,17 @@
 
 &i2c1 {
     status = "okay";
-    clock-frequency = <400000>;
-    // ss1306 device id = ((ox3c << 1) | write_read_flag) 
-    // 0x3c = 0x78 >> 1
+    clock-frequency = <200000>;
     pinctrl-names = "default";
     pinctrl-0 = <&i2c1_xfer>;
-
+    // ss1306 device id = ((ox3c << 1) | write_read_flag) 
+    // 0x3c = 0x78 >> 1
 	rtc: ds1307@68 {
 		compatible = "dallas,ds1307";
 		reg = <0x68>;
 		status = "disabled";
 	};
-
+    
     // ss1306 device id = ((ox3c << 1) | write_read_flag) 
     // 0x3c = 0x78 >> 1
     oled: ss1306@3c {
@@ -564,7 +634,6 @@
         width = <128>;
         height = <64>;
         page-offset = <0>;
-
         status = "okay";
     };
 };
@@ -792,19 +861,20 @@
 	pinctrl-0 = <&uart1_xfer>, <&uart1_cts>, <&uart1_rts>;
 	status = "okay";
 };
-
+// disabled for pwm2 and pwm3
 &uart2 {
-	status = "okay";
+	status = "disabled";
 };
 
 &uart3 {
 	status = "okay";
 };
-
+// disable uart4 cts and rts pin
 &uart4 {
 	pinctrl-names = "default";
-	pinctrl-0 = <&uart4_xfer>, <&uart4_cts>, <&uart4_rts>;
-	status = "okay";
+	pinctrl-0 = <&uart4_xfer>;// , <&uart4_cts>, <&uart4_rts>;
+	status = "disabled";
+    
 };
 
 &usbphy {
@@ -861,25 +931,29 @@
 };
 
 &pinctrl {
-    // GPIO6A1
-    oled_status_set_low: oled-rst-low {
-        pins = <RK_GPIO6 RK_PA1 RK_FUNC_GPIO &pcfg_pull_down>;
-        // slew-rate = <1>;
-        output-low;
-    };
-    oled_status_set_high: oled-rst-high {
-        pins = <RK_GPIO6 RK_PA1 RK_FUNC_GPIO &pcfg_pull_up>;
-        // slew-rate = <1>;
-        output-high;
+    // GPIO5B4
+    user_key {
+        key_set_input: key-set-input {
+            // rockchip.h 中没有定义 RK_GPIO5, 用 RK_GPIO5 报错
+           // rockchip,pins = <RK_GPIO5 RK_PB4 RK_FUNC_GPIO &pcfg_pull_up>;
+            rockchip,pins = <5 12 RK_FUNC_GPIO &pcfg_pull_up>;
+        };
     };
     // set i2c1 gpio to pullup, defalut voltage level to high
-    &i2c1 {
+    i2c1 {
         i2c1_xfer: i2c1-xfer {
             rockchip,pins = <8 4 RK_FUNC_1 &pcfg_pull_up_drv_8ma>,
                             <8 5 RK_FUNC_1 &pcfg_pull_up_drv_8ma>;
         };
     };
-
+    
+    uart4 {
+        uart4_xfer: uart4-xfer {
+            rockchip,pins = <5 15 3 &pcfg_pull_up>,
+                    <5 14 3 &pcfg_pull_none>;
+        };
+        //disable usart4-cts and uart4-rts, configurate none
+    };
 	pcfg_pull_none_drv_8ma: pcfg-pull-none-drv-8ma {
 		drive-strength = <8>;
 	};
