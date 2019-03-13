@@ -8,19 +8,19 @@
     - [x] input subsystem
     - [ ] iio (industrial I/O device)
     - [ ] input subsystem 
-    - [ ] i2c subsystem
+    - [x] i2c subsystem
     - [x] timer
 ---
 - [ ] linux deffering mechanism
     - [x] waitqueue
-    - [ ] tasklet
-    - [ ] workqueue
+    - [x] tasklet
+    - [x] workqueue
     - [ ] kthread
     - [ ] softirq
 ---
 - [ ] board commnications and operations
     - [x] gpio
-    - [ ] i2c
+    - [x] i2c
     - [ ] spi
     - [x] timer
     - [ ] PWM

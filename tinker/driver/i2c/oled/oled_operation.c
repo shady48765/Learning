@@ -74,7 +74,8 @@ int oled_write_cmd(unsigned char cmd)
     int ret;
     ret = oled_i2c_send_byte(oled_i2c_info->oled_client, ssd1306_cmd_addr, cmd);
     if(ret < 0)
-         err_msg("---> send cmd, sub_addr = 0x%x, cmd = 0x%x, ret = %d",ssd1306_cmd_addr, cmd, ret);
+         err_msg("---> send cmd, client_addr = 0x%x, sub_addr = 0x%x, cmd = 0x%x, ret = %d",
+         oled_i2c_info->oled_client->addr, ssd1306_cmd_addr, cmd, ret);
     return ret;
 }
 
@@ -83,7 +84,8 @@ int oled_write_data(unsigned char data)
     int ret;
     ret = oled_i2c_send_byte(oled_i2c_info->oled_client, ssd1306_data_addr, data);
     if (ret < 0)
-        err_msg("--->send data, sub_addr = 0x%x, data = 0x%x, ret = %d",ssd1306_data_addr, data, ret);
+        err_msg("--->send data, client_addr = 0x%x, sub_addr = 0x%x, data = 0x%x, ret = %d",
+        oled_i2c_info->oled_client->addr, ssd1306_data_addr, data, ret);
     return ret;
 }
 

@@ -4053,26 +4053,4 @@
 
 [ 1221.940711]  <OLED> timer_jiffy exit success
 [ 1221.940719]  <OLED> i2c driver remove
-[ 1221.943711] ------------[ cut here ]------------
-[ 1221.943752] WARNING: CPU: 3 PID: 1179 at drivers/gpio/gpiolib.c:1082 gpiod_free+0x44/0x4c()
-[ 1221.943765] Modules linked in: oled_driver_module(O-) [last unloaded: oled_driver_module]
-[ 1221.943801] CPU: 3 PID: 1179 Comm: rmmod Tainted: G        W  O    4.4.132+ #5
-[ 1221.943810] Hardware name: Rockchip (Device Tree)
-[ 1221.943848] [<c0110144>] (unwind_backtrace) from [<c010bdf0>] (show_stack+0x20/0x24)
-[ 1221.943870] [<c010bdf0>] (show_stack) from [<c0508cf0>] (dump_stack+0x84/0xa4)
-[ 1221.943890] [<c0508cf0>] (dump_stack) from [<c011e2ac>] (warn_slowpath_common+0x98/0xc4)
-[ 1221.943906] [<c011e2ac>] (warn_slowpath_common) from [<c011e394>] (warn_slowpath_null+0x2c/0x34)
-[ 1221.943922] [<c011e394>] (warn_slowpath_null) from [<c0546dcc>] (gpiod_free+0x44/0x4c)
-[ 1221.943939] [<c0546dcc>] (gpiod_free) from [<c0547424>] (gpio_free+0x1c/0x20)
-[ 1221.943955] [<c0547424>] (gpio_free) from [<c054411c>] (devm_gpio_release+0x1c/0x20)
-[ 1221.943975] [<c054411c>] (devm_gpio_release) from [<c0645cdc>] (release_nodes+0x1c4/0x1e4)
-[ 1221.943992] [<c0645cdc>] (release_nodes) from [<c0645dd8>] (devres_release_all+0x54/0x5c)
-[ 1221.944009] [<c0645dd8>] (devres_release_all) from [<c0642384>] (__device_release_driver+0xb0/0x114)
-[ 1221.944033] [<c0642384>] (__device_release_driver) from [<c06424d4>] (driver_detach+0x94/0xbc)
-[ 1221.944054] [<c06424d4>] (driver_detach) from [<c0641800>] (bus_remove_driver+0x74/0x9c)
-[ 1221.944070] [<c0641800>] (bus_remove_driver) from [<c0642dc0>] (driver_unregister+0x4c/0x58)
-[ 1221.944090] [<c0642dc0>] (driver_unregister) from [<c07894e4>] (i2c_del_driver+0x28/0x30)
-[ 1221.944116] [<c07894e4>] (i2c_del_driver) from [<bf022178>] (oled_i2c_driver_exit+0x14/0xe9c [oled_driver_module])
-[ 1221.944143] [<bf022178>] (oled_i2c_driver_exit [oled_driver_module]) from [<c01a2fe0>] (SyS_delete_module+0x170/0x1e4)
-[ 1221.944164] [<c01a2fe0>] (SyS_delete_module) from [<c0107600>] (ret_fast_syscall+0x0/0x48)
-[ 1221.944306] ---[ end trace 5fa5b6015953ab03 ]---
+

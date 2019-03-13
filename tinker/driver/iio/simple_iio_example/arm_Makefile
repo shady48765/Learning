@@ -2,8 +2,8 @@
 # CONFIG_MODULE_SIG=n
 
 ifneq ($(KERNELRELEASE),)
-	MODULE_NAME = driver_simple_iio_example
-	${MODULE_NAME}_module-objs := 	driver_simple_iio_example.o 
+	MODULE_NAME = foo_iio_demo
+	${MODULE_NAME}_module-objs := 	foo_iio_demo.o 
 	obj-m := ${MODULE_NAME}_module.o
 
 else
@@ -11,7 +11,7 @@ else
 # get system verison
 KVERS = $(shell uname -r)
 # module install name
-MODULE_NAME = driver_simple_iio_example
+MODULE_NAME = foo_iio_demo
 
 # module test app name
 APP_NAME = app_${MODULE_NAME}

@@ -48,7 +48,7 @@ static enum hrtimer_restart loop_hrtimer_callback(struct hrtimer * arg)
 static int oled_timer_init(unsigned long ticks)
 {
 	usr_msg("------> system jiffies = %ld", jiffies);
-	tim = kzalloc(sizeof(struct _oled_timer)), GFP_KERNEL);
+	tim = kzalloc(sizeof(struct _oled_timer), GFP_KERNEL);
 	if(IS_ERR(tim)) {
 		err_msg("error : malloc struct _oled_timer");
 		return PTR_ERR(_oled_timer);
@@ -291,7 +291,7 @@ static int oled_get_i2c_dts_info(struct i2c_client * client)
 	return 0;
 
 }
-s
+
 static int oled_i2c_probe(struct i2c_client * client, const struct i2c_device_id *i2c_id)
 {
     int ret = 0;

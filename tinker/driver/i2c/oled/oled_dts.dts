@@ -21,10 +21,10 @@
 };
 &pinctrl {
     // set i2c1 gpio to pullup, defalut voltage level to high
-    &i2c1 {
-        &i2c1_xfer: i2c1-xfer {
-            rockchip,pins = <8 4 RK_FUNC_1 &pcfg_pull_up>,
-                            <8 5 RK_FUNC_1 &pcfg_pull_up>;
+    i2c1 {
+        i2c1_xfer: i2c1-xfer {
+            rockchip,pins = <8 4 RK_FUNC_1 &pcfg_pull_up_drv_8ma>,
+                            <8 5 RK_FUNC_1 &pcfg_pull_up_drv_8ma>;
         };
     };
 };

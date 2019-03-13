@@ -54,6 +54,7 @@ int foo_timer_init(void)
 {
     int retval = 0;
     mutex_lock(&foo_mutex);
+    /** linux kernel version > 4.15 init_timer can not use */
     init_timer(&foo_time);              // init kernel timer
     do_gettimeofday(&old_tmval);        // get current time
     foo_time.function = foo_timer_callback;             // set call back function
@@ -203,7 +204,7 @@ static void __exit timer_jiffy_exit(void)
     unregister_chrdev_region(foo_dev_info->foo_dev_number, 1);
     kfree(foo_dev_info);
 
-    retval = del_timer(&foo_time);
+    retval = del_timer_sync(&foo_time);
     if (retval)
         err_msg("The timer is still in use...\n");
     usr_msg("Timer module unloaded\n");
