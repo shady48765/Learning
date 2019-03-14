@@ -1,22 +1,22 @@
 # get system verison
 KVERS = $(shell uname -r)
-# get driver floder path
+# get DRIVER_NAME floder path
 CURDIR := $(shell pwd)
 # module install name
-MODULE_NAME = delay_queue
+DRIVER_NAME = delayqueue
 # Kernel modules
-obj-m += ${MODULE_NAME}.o
+obj-m += ${DRIVER_NAME}.o
 
 # Specify flags for the module compilation.
 #EXTRA_CFLAGS=-g -O0
 CC = gcc -Wall
-APPLICATION_NAME = app_${MODULE_NAME}
+APPLICATION_NAME = app_${DRIVER_NAME}
 
-driver = ${MODULE_NAME}.ko
-# device += ${MODULE_DEV_NAME}.ko
+DRV_MODULE_NAME += ${DRIVER_NAME}.ko
+# DEV_MODULE_NAME += ${MODULE_DEV_NAME}.ko
 
 
-all : module
+all: module
 module:
 	@echo "---> current path : ${CURDIR}"
 	make -C /lib/modules/$(KVERS)/build M=$(CURDIR) modules
@@ -26,20 +26,20 @@ app:
 	$(CC) -o ${APPLICATION_NAME} ${APPLICATION_NAME}.c -lpthread
 cleanall:
 	make -C /lib/modules/$(KVERS)/build M=$(CURDIR) clean
-	rm -rvf .*.?.sw?p 
-	rm -rvf .*.?.swp 
+	rm -rvf .*.?.sw?p  .*.?.swp 
 	rm -rvf ${APPLICATION_NAME}
 	@echo "---> all clean"
 clean:
 	@echo "---> clean trash file."
 	rm -rvf .*.?.sw?p .*.?.swp *.o *.*.o .*.cmd .tmp_versions *.mod.c Module.symvers modules.order
 install:
-	# @echo "---> install module $(device)"
-	# $(shell sudo insmod ${device})
-	@echo "---> install module $(driver)"
-	$(shell sudo insmod ${driver})
+	@echo "---> install module ${DRV_MODULE_NAME}"
+	$(shell sudo insmod ${DRV_MODULE_NAME})
 remove:
-	@echo "---> remove module $(MODULE_NAME)"
-	$(shell sudo rmmod $(MODULE_NAME))
-.PHONY: kernel_modules app cleanall clean install remove
+	@echo "---> remove module ${DRIVER_NAME}"
+	$(shell sudo rmmod ${DRIVER_NAME})
+# info:
+# 	@echo "---> get module info ${DRV_MODULE_NAME}"
+# 	$(shell sudo modinfo ${DRV_MODULE_NAME})
+.PHONY: module app cleanall clean install remove info
 # ------------------------------- END LINE -----------------------------------------

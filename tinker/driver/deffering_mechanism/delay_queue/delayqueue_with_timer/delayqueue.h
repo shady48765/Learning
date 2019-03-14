@@ -1,5 +1,5 @@
-#ifndef __DELAY_QUEUE_H
-#define __DELAY_QUEUE_H
+#ifndef __DELAYQUEUE_H
+#define __DELAYQUEUE_H
 
 
 #include <linux/init.h>
@@ -36,14 +36,14 @@
 #define err_msg(fmt, args...)       printk(USR_ERR_LEVEL TAG fmt"(function: %s)[line: %d]\n",__func__, __LINE__, ##args)
 
 #ifndef MS_TO_NS
-	#define MS_TO_NS(x) 	(x * (1000000UL))      // ms to ns
+	#define MS_TO_NS(x) 			(x * (1000000UL))      // ms to ns
 #endif	/** end of #ifndef MS_TO_NS */
 
 #define show_HZ()		usr_msg("system HZ = %u", HZ)
 
 
 #define FOO_DEV_NAME                "foo_delay_queue"
-#define DIRECT_CREATE_SYSFS			0
+#define HRS_TIMER			        1
 
 
 struct timer_info {
@@ -54,11 +54,7 @@ struct timer_info {
 	ktime_t 			tim_period;
 };
 
-struct foo_device_info {
-    struct mutex 		dev_lock;
-	struct timer_info 	*tim_info;
-    
-};
+
 
 /**--------------------- function define start ---------------------------*/
 // int foo_device_create(void);

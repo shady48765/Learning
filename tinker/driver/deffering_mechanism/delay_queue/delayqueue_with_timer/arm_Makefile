@@ -3,39 +3,40 @@
 KVERS = $(shell uname -r)
 
 # module install name
-MODULE_NAME = delay_queue
+DRIVER_NAME = delayqueue
 
 # module test app name
-APP_NAME = app_${MODULE_NAME}
+APP_NAME = app_${DRIVER_NAME}
 
 CROSS_COMPILE = arm-linux-gnueabihf-
 CC = $(CROSS_COMPILE)gcc
 
-# Kernel modules
-obj-m += ${MODULE_NAME}.o
+# add driver to Kernel modules
+obj-m += ${DRIVER_NAME}.o
+
+# kernel module
+DRIVER_MODULE = ${DRIVER_NAME}.ko
 
 # kernel dir
 KERNEL_DIR = /arm/tinker/debian_kernel
 # KERNEL_DIR = /home/quan/tinker/debian_kernel
-# get driver floder path
+# get driver folder path
 CUR_DIR = $(shell pwd)
 
-all : modules
+all: modules
 
 modules:
 	make -C $(KERNEL_DIR) M=$(CUR_DIR) modules ARCH=arm CROSS_COMPILE=arm-linux-gnueabihf-
 	@echo "---> kernel_modules build finished."
 
-app :
+app:
 	$(CC) $(APP_NAME).c -o $(APP_NAME)
 	@echo "---> app build finished."
 
-cleanall :
+cleanall:
 	make -C $(KERNEL_DIR) M=$(CUR_DIR) clean
 	rm -rvf $(APP_NAME)
-	rm -rvf .*.?.sw?p
-	rm -rvf .*.?.swp
-	rm -rvf {APP_NAME}
+	rm -rvf .*.?.sw?p .*.?.swp ${APP_NAME}
 	@echo "---> all clean."
 
 clean:
@@ -44,11 +45,13 @@ clean:
 	@echo "---> clean finished."
 
 install:
-	@echo "---> install module $(MODULE_NAME)"
-	$(shell sudo insmod $(MODULE_NAME).ko)
+	@echo "---> install module ${DRIVER_MODULE}"
+	$(shell sudo insmod ${DRIVER_MODULE})
 remove:
-	@echo "---> remove module $(MODULE_NAME)"
-	$(shell sudo rmmod $(MODULE_NAME).ko)
-
-.PHONY: modules app cleanall clean install remove
-#-------------------- END LINE --------------------------
+	@echo "---> remove module ${DRIVER_NAME}"
+	$(shell sudo rmmod ${DRIVER_NAME})
+# info:
+# 	@echo "---> get module info ${DRIVER_MODULE}"
+# 	$(shell sudo modinfo ${DRIVER_MODULE})
+.PHONY: modules app cleanall clean install remove info
+#-------------------------------- END LINE -------------------------------

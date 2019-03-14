@@ -1,14 +1,14 @@
 
-#include "delay_queue.h"
+#include "delayqueue.h"
 
 
 // dynamically hrtimer ticks, for millisecond
-static unsigned int ticks = 0;
-static unsigned int loop_counter = 0;
+static unsigned int ticks;
+static unsigned int loop_counter;
+static struct delayed_work foo_work;
+struct timer_info * timer_info;
 
-static struct foo_device_info * foo_dev_info;
-
-
+#if HRS_TIMER
 static enum hrtimer_restart foo_hrtimer_callback(struct hrtimer * arg)
 {
 	ktime_t now;
@@ -31,7 +31,7 @@ static enum hrtimer_restart foo_hrtimer_callback(struct hrtimer * arg)
     	loop_counter = 0;
     }
 	usr_msg("loop_counter = %d", loop_counter);
-	
+	schedule_delayed_work(&foo_work, msecs_to_jiffies(1000));
     return HRTIMER_RESTART;
 }
 
@@ -59,48 +59,49 @@ static void foo_timer_init(struct timer_info * tim_info, unsigned int micro_seco
     mutex_unlock(&tim_info->tim_lock);
 }
 
+#endif /** #if HRS_TIMER */
 
 
-static struct delayed_work foo_work;
 
 static void work_handler(struct work_struct *work)
 {
-	usr_msg("------> work handler");
+    static unsigned int work_handler_tick = 0;
+    work_handler_tick++;
+	usr_msg("------> work handler, work_handler_tick = %d", work_handler_tick);
 }
-
-
 
 
 static int __init foo_delayqueue_init(void)
 {
-   
+    
     usr_msg("ready to init device.");
 	show_HZ();
-	
-	foo_dev_info = kmalloc(sizeof(struct foo_device_info), GFP_KERNEL);
-	if(IS_ERR(foo_dev_info)) {
+    
+	timer_info = kmalloc(sizeof(struct timer_info), GFP_KERNEL);
+	if(IS_ERR(timer_info)) {
 		err_msg("error : devm_kmalloc foo_device_info");
 		return -ENOMEM;
 	}
     
-	mutex_init(&foo_dev_info->dev_lock);
+	mutex_init(&timer_info->tim_lock);
+#if HRS_TIMER
 	usr_msg("default ticks set to 2 seconds");
-	foo_timer_init(foo_dev_info->tim_info, 2000);
-
+	foo_timer_init(timer_info, 2000);
+#endif
 	INIT_DELAYED_WORK(&foo_work, work_handler);
-	schedule_delayed_work(&foo_work, msecs_to_jiffies(1000));
 
 	return 0;
 }
 
 static void __exit foo_delayqueue_exit(void)
 {
+
 	int ret = 0;
 	
 	usr_msg("removed driver: %s", FOO_DEV_NAME);
-
+#if HRS_TIMER
 	do {
-		ret = hrtimer_try_to_cancel(&foo_dev_info->tim_info->tim);
+		ret = hrtimer_try_to_cancel(&timer_info->tim);
 		if(ret < 0) {
 			err_msg("timer : timer is in callback function");
 		} else if(ret == 1) {
@@ -109,9 +110,12 @@ static void __exit foo_delayqueue_exit(void)
 			err_msg("timer : timer ready to cancel");
 		}
 	} while(ret);
+#endif /** #if HRS_TIMER */
+    usr_msg("destory delayed work sync");
+    cancel_delayed_work_sync(&foo_work);
+	kfree(timer_info);
+	timer_info = NULL;
 
-	kfree(foo_dev_info);
-	foo_dev_info = NULL;
 }
 
 module_init(foo_delayqueue_init);
@@ -119,5 +123,5 @@ module_exit(foo_delayqueue_exit);
 
 MODULE_LICENSE("GPL");
 MODULE_AUTHOR("V");
-MODULE_DESCRIPTION("sysfs demo.");
+MODULE_DESCRIPTION("delay work queue demo.");
 
