@@ -25,7 +25,7 @@ static void foo_queue_recall_function(struct work_struct *work)
     wake_up_interruptible(&foo_queue_head);
     usr_msg("queue has been woke-up, current condition = %d", condition);
     // reschedule 10 times
-    if(1 == foo_waitqueue_repeat_schedule && counter < 10) {
+    if(1 == foo_waitqueue_repeat_schedule && condition < 10) {
         msleep(1000);
         schedule_work(&foo_queue_work);
     }
