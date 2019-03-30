@@ -3,7 +3,7 @@ KVERS = $(shell uname -r)
 # get DRIVER_NAME floder path
 CURDIR := $(shell pwd)
 # module install name
-DRIVER_NAME = customer_key
+DRIVER_NAME = customer_home_key_input_trigger_ok
 # Kernel modules
 obj-m += ${DRIVER_NAME}.o
 
