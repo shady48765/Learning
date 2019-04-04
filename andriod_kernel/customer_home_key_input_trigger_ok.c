@@ -51,6 +51,7 @@ static struct of_device_id key_dts_table[] = {
 MODULE_DEVICE_TABLE(of, key_dts_table);
 
 /*--------------------------------------------------------------------------------------------------------------*/
+#define HRT_TIMER				0
 
 #define MS_TO_NS(x) (x * 1000000)      // ms to ns
 
@@ -62,11 +63,16 @@ struct usr_keys_button {
 	struct mutex 				lock;
 	struct workqueue_struct 	* wq;
 	struct work_struct			work;
-	/** timer --------------------------------------------------*/
-	ktime_t						tim_period;
-	struct	hrtimer 			tim;
-	struct mutex				tim_lock;
-	
+// #if HRT_TIMER
+// 	/** hrt timer --------------------------------------------------*/
+// 	ktime_t						tim_period;
+// 	struct	hrtimer 			tim;
+// #else
+// 	/** standard timer ---------------------------------------------*/
+// 	struct timer_list 			tim;
+// 	unsigned int 				tim_seconds;	
+// #endif
+// 	struct mutex				tim_lock;
 };
 
 static int trigger_flag;
@@ -87,7 +93,7 @@ static void data_handler(struct work_struct * work)
 		mutex_lock(&btn->lock);
 		key_val = gpio_get_value(btn->touch_home_btn);
 		if(key_val) {
-			mdelay(100);
+			mdelay(150);
 			if(key_val == gpio_get_value(btn->touch_home_btn)) {
 				usr_msg("release");
 				input_report_key(btn->inputdev, KEY_VAL, 1);
@@ -95,7 +101,7 @@ static void data_handler(struct work_struct * work)
 			} else
 				goto out;
 		} else {
-			mdelay(100);
+			mdelay(150);
 			if(key_val == gpio_get_value(btn->touch_home_btn)) {
 	        	usr_msg("pressed");
 	        	input_report_key(btn->inputdev, KEY_VAL, 0);
@@ -135,37 +141,68 @@ static void chip_cp2610_init(struct usr_keys_button * btn)
 	mdelay(200);
 }
 
+// #if HRT_TIMER
+// static enum hrtimer_restart usr_hrtimer_callback(struct hrtimer * arg)
+// {
+// 	ktime_t now;
+// 	struct usr_keys_button * btn = container_of(arg, struct usr_keys_button, tim);
+// 	if(!btn) {
+// 		usr_msg("error: get struct timer_structure in function: %s", __func__);
+// 	}	
+// 	usr_msg("tick count, reset chip");
+// 	mutex_lock(&btn->tim_lock);
+//     now = arg->base->get_time();
+// 	chip_cp2610_init(btn);
+//     hrtimer_forward(arg, now, btn->tim_period);
+// 	mutex_unlock(&btn->tim_lock);
+//     return HRTIMER_RESTART;
+// }
 
-static enum hrtimer_restart usr_hrtimer_callback(struct hrtimer * arg)
-{
-	ktime_t now;
-	struct usr_keys_button * btn = container_of(arg, struct usr_keys_button, tim);
-	if(!btn) {
-		usr_msg("error: get struct timer_structure in function: %s", __func__);
-	}	
-	usr_msg("tick count, reset chip");
-    now = arg->base->get_time();
-	chip_cp2610_init(btn);
-    hrtimer_forward(arg, now, btn->tim_period);
+// static void hrt_timer_init(struct usr_keys_button	* btn, s64 seconds, unsigned long mseconds)
+// {
+//     btn->tim_period = ktime_set(seconds, MS_TO_NS(mseconds));    
+//     hrtimer_init(&btn->tim, CLOCK_MONOTONIC, HRTIMER_MODE_REL);
+//     btn->tim.function = usr_hrtimer_callback;
 	
-    return HRTIMER_RESTART;
-}
+//     hrtimer_start(&btn->tim, btn->tim_period, HRTIMER_MODE_REL);
+// 	mutex_init(&btn->tim_lock);
+// }
 
-static void hrt_timer_init(struct usr_keys_button	* btn, s64 seconds, unsigned long mseconds)
-{
-    btn->tim_period = ktime_set(seconds, MS_TO_NS(mseconds));    
-    hrtimer_init(&btn->tim, CLOCK_MONOTONIC, HRTIMER_MODE_REL);
-    btn->tim.function = usr_hrtimer_callback;
-	
-    hrtimer_start(&btn->tim, btn->tim_period, HRTIMER_MODE_REL);
-	mutex_init(&btn->tim_lock);
-}
+// static void hrt_timer_del(struct usr_keys_button	* btn)
+// {
+// 	while(hrtimer_try_to_cancel(&btn->tim));
+// 	hrtimer_cancel(&btn->tim);
+// }
+// #else
+// static void usr_standard_timer_callback(unsigned long arg)
+// {
+// 	struct usr_keys_button * btn = (struct usr_keys_button *)arg;
+// 	if(!btn) {
+// 		usr_msg("error: get struct address in function: %s", __func__);
+// 		return ;
+// 	}
+// 	usr_msg("tick count, reset chip");
+// 	chip_cp2610_init(btn);
+// 	mod_timer(&btn->tim, (jiffies + btn->tim_seconds * HZ));
+// }
 
-static void hrt_timer_del(struct usr_keys_button	* btn)
-{
-	while(hrtimer_try_to_cancel(&btn->tim));
-	hrtimer_cancel(&btn->tim);
-}
+// static void standard_timer_init(struct usr_keys_button	* btn, s64 seconds)
+// {
+// 	mutex_init(&btn->tim_lock);
+// 	init_timer(&btn->tim);
+// 	btn->tim.function = usr_standard_timer_callback;
+// 	btn->tim.data = (unsigned long)btn;
+// 	btn->tim.expires = jiffies + seconds * HZ;
+// 	btn->tim_seconds = seconds;
+// 	add_timer(&btn->tim);
+// }
+
+// static void standard_timer_del(struct usr_keys_button	* btn)
+// {
+// 	// del_timer_sync(&btn->tim);
+// 	del_timer(&btn->tim);
+// }
+// #endif	// end of #if HRT_TIMER
 
 static int usr_get_dts_info(struct usr_keys_button * btn, struct device *dev)
 {
@@ -271,7 +308,11 @@ static int key_probe(struct platform_device *pdev)
 		goto error3;
 	}
 	usr_msg("requested irq number = %d", btn->irq);
-	hrt_timer_init(btn, 10, 0);
+// #if HRT_TIMER
+// 	hrt_timer_init(btn, 10, 0);
+// #else
+// 	standard_timer_init(btn, 30);
+// #endif
 	platform_set_drvdata(pdev, (void *) btn);
 	dev_set_drvdata(&pdev->dev, (void *) btn);
 	return 0;
@@ -289,42 +330,50 @@ static int key_remove(struct platform_device *pdev)
 {
 	struct usr_keys_button *btn = platform_get_drvdata(pdev);
 	
+	cancel_work_sync(&btn->work);
 	flush_workqueue(btn->wq);
 	destroy_workqueue(btn->wq);
-	hrt_timer_del(btn);
+// #if HRT_TIMER
+// 	hrt_timer_del(btn);
+// #else
+// 	standard_timer_del(btn);
+// #endif
 	input_unregister_device(btn->inputdev);
 	
 	return 0;
 }
 
-#ifdef CONFIG_PM
+
+#ifdef CONFIG_PM	
 static int key_suspend(struct device *dev)
 {
 	struct usr_keys_button *btn = dev_get_drvdata(dev);
 	usr_msg("ready to suspend");
-	hrt_timer_del(btn);
-	gpio_set_value(btn->touch_ic_rst, 0);
-	free_irq(btn->irq, NULL);
+	disable_irq_nosync(btn->irq);
+// #if HRT_TIMER
+// 	hrt_timer_del(btn);
+// #else
+// 	standard_timer_del(btn);
+// #endif
 	cancel_work_sync(&btn->work);
 	flush_workqueue(btn->wq);
-	mdelay(500);
+	gpio_set_value(btn->touch_ic_rst, 0);
+	usr_msg("customer key suspended.");
 	return 0;
 }
 
 static int key_resume(struct device *dev)
 {
-	int ret;
-
 	struct usr_keys_button *btn = dev_get_drvdata(dev);
 	usr_msg("ready to resume");
-	ret = request_irq(btn->irq, usr_key_handler, IRQF_TRIGGER_FALLING | IRQF_TRIGGER_RISING, "usr_home_btn_irq", NULL);
-	if(ret < 0) {
-		usr_msg("error: request irq in function: %s", __func__);
-		return -EIO;
-	}
-	gpio_direction_output(btn->touch_ic_rst, 1);
 	chip_cp2610_init(btn);
-	hrt_timer_init(btn, 10, 0);
+// #if HRT_TIMER
+// 	hrt_timer_init(btn, 10, 0);
+// #else
+// 	standard_timer_init(btn, 30);
+// #endif
+	enable_irq(btn->irq);
+	usr_msg("customer key resumed operation.");
 	return 0;
 }
 #endif
