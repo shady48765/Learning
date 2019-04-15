@@ -1,0 +1,26 @@
+
+keys {
+    compatibale = "rockchip,power-key";
+    status = "okay"
+    pwr-ctrl {
+        power-ctrl = <&gpiox, RK_Pxx, GPIO_ACTIVER_HIGH>;
+        lable = "power-key-ctrl";
+        pinctrl-names = "default";
+		pinctrl-0 = <&pwrbtn>;
+    };
+    power {
+        power-ctrl = <&gpiox, RK_Pxx, GPIO_ACTIVER_HIGH>;
+		linux,code = <116>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&pwrbtn>;
+		label = "power";
+		gpio-key,wakeup;
+    };
+};
+
+&pinctrl {
+	buttons {
+		pwrbtn: pwrbtn {
+			rockchip,pins = <0 5 RK_FUNC_GPIO &pcfg_pull_up>;
+		};
+};

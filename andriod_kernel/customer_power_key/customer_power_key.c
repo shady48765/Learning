@@ -32,10 +32,10 @@
 
 // define in /include/uapi/linux/input.h : #define #define KEY_HOMEPAGE 
 
-// #define KEY_VAL						KEY_BACK
-#define KEY_VAL				    		KEY_HOMEPAGE		// android home key
-#define KEY_NAME						"usr_home_button"
-#define TAG								" <KEY> "
+// #define KEY_VAL							KEY_POWER	// 116
+// #define KEY_VAL				    		KEY_HOMEPAGE		// android home key
+#define KEY_NAME						"customer_power_keys"
+#define TAG								"<KEY>"
 #define SET_LEVEL						KERN_INFO
 #define usr_msg(fmt, args...)			printk(SET_LEVEL TAG fmt"\n", ##args)
 
@@ -45,7 +45,7 @@ typedef enum {
 }gpio_status;
 
 static struct of_device_id key_dts_table[] = {
-	{ .compatible = "usr-home-button", },
+	{ .compatible = "rockchip,power-key", },
 	{ },
 };
 MODULE_DEVICE_TABLE(of, key_dts_table);
@@ -55,9 +55,9 @@ MODULE_DEVICE_TABLE(of, key_dts_table);
 
 #define MS_TO_NS(x) (x * 1000000)      // ms to ns
 
-struct usr_keys_button {
-	int 						touch_home_btn;
-	int 						touch_ic_rst;
+struct customer_keys {
+	int 						pwr_ctrl;
+	int 						power;
 	unsigned int 				irq;
 	struct input_dev 			*inputdev;
 	struct mutex 				lock;
@@ -74,6 +74,8 @@ struct usr_keys_button {
 // #endif
 // 	struct mutex				tim_lock;
 };
+
+struct timer_list tim;
 
 static int trigger_flag;
 
@@ -204,7 +206,7 @@ static void chip_cp2610_init(struct usr_keys_button * btn)
 // }
 // #endif	// end of #if HRT_TIMER
 
-static int usr_get_dts_info(struct usr_keys_button * btn, struct device *dev)
+static int keys_get_dts_info(struct usr_keys_button * btn, struct device *dev)
 {
 	int ret;
 	struct device_node *node;
@@ -249,8 +251,13 @@ out1:
 static int key_probe(struct platform_device *pdev)
 {
 	int ret;
-
-	struct usr_keys_button * btn = devm_kmalloc(&pdev->dev, sizeof(struct usr_keys_button), GFP_KERNEL);
+	ret = of_get_child_count(pdev->dev.of_node);
+	if(ret < 0) {
+		usr_msg("error: no keys");
+		return ret;
+	}
+	
+	struct customer_keys * btn = devm_kmalloc(&pdev->dev, sizeof(struct customer_keys), GFP_KERNEL);
 	if(IS_ERR(btn)) {
 		usr_msg("error: devm_kmalloc");
 		return -ENOMEM;
@@ -284,15 +291,13 @@ static int key_probe(struct platform_device *pdev)
 		goto error1;
 	}
 	
-	ret = usr_get_dts_info(btn, &pdev->dev);
+	ret = keys_get_dts_info(btn, &pdev->dev);
 	if(ret < 0) {
 		ret = -ENODEV;
 		usr_msg("error: get gpio dts info");
 		goto error2;
 	}
-	chip_cp2610_init(btn);
-	
-	trigger_flag = 0;
+
 	btn->wq = create_singlethread_workqueue("key_data_handler");
 	if (!btn->wq) {
 		usr_msg("error: can not create workqueue");
@@ -301,8 +306,8 @@ static int key_probe(struct platform_device *pdev)
 	flush_workqueue(btn->wq);
 	INIT_WORK(&btn->work, data_handler);
 
-	btn->irq = gpio_to_irq(btn->touch_home_btn);
-	ret = request_irq(btn->irq, usr_key_handler, IRQF_TRIGGER_FALLING | IRQF_TRIGGER_RISING, "usr_home_btn_irq", (void *)btn);
+	btn->irq = gpio_to_irq(btn->power);
+	ret = request_irq(btn->irq, usr_key_handler, IRQF_TRIGGER_FALLING | IRQF_TRIGGER_RISING, "powr-key-irq", (void *)btn);
 	if(ret < 0) {
 		usr_msg("error: request irq");
 		goto error3;
