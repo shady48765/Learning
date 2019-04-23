@@ -1,26 +1,29 @@
 
-keys {
-    compatibale = "rockchip,power-key";
-    status = "okay"
-    pwr-ctrl {
-        power-ctrl = <&gpiox, RK_Pxx, GPIO_ACTIVER_HIGH>;
-        lable = "power-key-ctrl";
-        pinctrl-names = "default";
-		pinctrl-0 = <&pwrbtn>;
+   /********************************************************************
+   （2）Power key 接P0.4（关机：P4.2为低电平时按键3秒，P5.3输出高电平；开机：P4.2为高电平时按键3秒，P4.4输出高电平）
+    RK_PA6 默认低，对应 mcu P4.2 为高
+    P5.3 输出高对应 rk3288 gpio0B6 为高
+    开机 mcu p4.4 对应DC-DC芯片控制脚，不用控制
+    
+   *********************************************************************/
+   
+   
+    keys {
+        compatible = "rockchip,pwr-ctrl-keys";
+        status = "okay";
+        pwr-ctrl-keys {
+            pwr-key = <&gpio8 RK_PA6 GPIO_ACTIVE_HIGH>;
+            label = "power-ctrl";
+        };
+        pwr-off {
+            pwr-key = <&gpio0 RK_PB6 GPIO_ACTIVE_HIGH>;
+            label = "power";
+            linux,code = <116>;
+        };
+        p42 {
+            p42 = <&gpio0 RK_PB6 GPIO_ACTIVE_HIGH>;
+            label = "power";
+            linux,code = <116>;
+        };
     };
-    power {
-        power-ctrl = <&gpiox, RK_Pxx, GPIO_ACTIVER_HIGH>;
-		linux,code = <116>;
-		pinctrl-names = "default";
-		pinctrl-0 = <&pwrbtn>;
-		label = "power";
-		gpio-key,wakeup;
-    };
-};
-
-&pinctrl {
-	buttons {
-		pwrbtn: pwrbtn {
-			rockchip,pins = <0 5 RK_FUNC_GPIO &pcfg_pull_up>;
-		};
-};
+    

@@ -55,24 +55,22 @@ MODULE_DEVICE_TABLE(of, key_dts_table);
 
 #define MS_TO_NS(x) (x * 1000000)      // ms to ns
 
+struct keys {
+	char *key_label;
+	int pin_num;
+	unsigned int linux_code;
+	
+};
 struct customer_keys {
-	int 						pwr_ctrl;
-	int 						power;
+	struct keys 				* pwr_ctrl;
+	struct keys 				* power;
 	unsigned int 				irq;
 	struct input_dev 			*inputdev;
 	struct mutex 				lock;
 	struct workqueue_struct 	* wq;
 	struct work_struct			work;
-// #if HRT_TIMER
-// 	/** hrt timer --------------------------------------------------*/
-// 	ktime_t						tim_period;
-// 	struct	hrtimer 			tim;
-// #else
-// 	/** standard timer ---------------------------------------------*/
-// 	struct timer_list 			tim;
-// 	unsigned int 				tim_seconds;	
-// #endif
-// 	struct mutex				tim_lock;
+
+	struct keys 				keys[2];
 };
 
 struct timer_list tim;
@@ -82,7 +80,7 @@ static int trigger_flag;
 static void data_handler(struct work_struct * work)
 {
 	int key_val;
-	struct usr_keys_button * btn = container_of(work, struct usr_keys_button, work);
+	struct customer_keys * btn = container_of(work, struct customer_keys, work);
 	if(IS_ERR(btn)) {
 		usr_msg("error: get struct usr_keys_button in function: %s", __func__);
 		return ;
@@ -124,7 +122,7 @@ out:
 
 static irqreturn_t usr_key_handler(int irq, void *arg)
 {
-	struct usr_keys_button * btn = (struct usr_keys_button *)arg;
+	struct customer_keys * btn = (struct customer_keys *)arg;
 	if(!btn) {
 		usr_msg("error: usr_keys_button in function: %s", __func__);
 		return IRQ_HANDLED;
@@ -135,117 +133,58 @@ static irqreturn_t usr_key_handler(int irq, void *arg)
     return IRQ_HANDLED; 
 }
 
-static void chip_cp2610_init(struct usr_keys_button * btn)
+static int keys_get_dts_info(struct customer_keys * btn, struct platform_device *pdev)
 {
-	gpio_set_value(btn->touch_ic_rst, 0);
-	mdelay(500);
-	gpio_set_value(btn->touch_ic_rst, 1);
-	mdelay(200);
-}
-
-// #if HRT_TIMER
-// static enum hrtimer_restart usr_hrtimer_callback(struct hrtimer * arg)
-// {
-// 	ktime_t now;
-// 	struct usr_keys_button * btn = container_of(arg, struct usr_keys_button, tim);
-// 	if(!btn) {
-// 		usr_msg("error: get struct timer_structure in function: %s", __func__);
-// 	}	
-// 	usr_msg("tick count, reset chip");
-// 	mutex_lock(&btn->tim_lock);
-//     now = arg->base->get_time();
-// 	chip_cp2610_init(btn);
-//     hrtimer_forward(arg, now, btn->tim_period);
-// 	mutex_unlock(&btn->tim_lock);
-//     return HRTIMER_RESTART;
-// }
-
-// static void hrt_timer_init(struct usr_keys_button	* btn, s64 seconds, unsigned long mseconds)
-// {
-//     btn->tim_period = ktime_set(seconds, MS_TO_NS(mseconds));    
-//     hrtimer_init(&btn->tim, CLOCK_MONOTONIC, HRTIMER_MODE_REL);
-//     btn->tim.function = usr_hrtimer_callback;
-	
-//     hrtimer_start(&btn->tim, btn->tim_period, HRTIMER_MODE_REL);
-// 	mutex_init(&btn->tim_lock);
-// }
-
-// static void hrt_timer_del(struct usr_keys_button	* btn)
-// {
-// 	while(hrtimer_try_to_cancel(&btn->tim));
-// 	hrtimer_cancel(&btn->tim);
-// }
-// #else
-// static void usr_standard_timer_callback(unsigned long arg)
-// {
-// 	struct usr_keys_button * btn = (struct usr_keys_button *)arg;
-// 	if(!btn) {
-// 		usr_msg("error: get struct address in function: %s", __func__);
-// 		return ;
-// 	}
-// 	usr_msg("tick count, reset chip");
-// 	chip_cp2610_init(btn);
-// 	mod_timer(&btn->tim, (jiffies + btn->tim_seconds * HZ));
-// }
-
-// static void standard_timer_init(struct usr_keys_button	* btn, s64 seconds)
-// {
-// 	mutex_init(&btn->tim_lock);
-// 	init_timer(&btn->tim);
-// 	btn->tim.function = usr_standard_timer_callback;
-// 	btn->tim.data = (unsigned long)btn;
-// 	btn->tim.expires = jiffies + seconds * HZ;
-// 	btn->tim_seconds = seconds;
-// 	add_timer(&btn->tim);
-// }
-
-// static void standard_timer_del(struct usr_keys_button	* btn)
-// {
-// 	// del_timer_sync(&btn->tim);
-// 	del_timer(&btn->tim);
-// }
-// #endif	// end of #if HRT_TIMER
-
-static int keys_get_dts_info(struct usr_keys_button * btn, struct device *dev)
-{
-	int ret;
-	struct device_node *node;
-	
-	node = of_find_node_by_name(NULL, "usr-home-button"); 
-	if (!node) {
-		usr_msg("cannot find node name usr-home-button");
+	int ret, index;
+	unsigned int flags;
+	struct device_node *child_node;
+	struct device_node *node = pdev->dev.of_node;
+	if(!node) {
+		usr_msg("error: get dev.of_node");
 		return -ENODEV;
 	}
-	btn->touch_home_btn = of_get_named_gpio(node, "touch-home-btn", 0);
-	if(!gpio_is_valid(btn->touch_home_btn)) {
-		usr_msg("error: get touch_home_btn gpio info. ERROR code %d", btn->touch_home_btn);
-		return -EIO;
+	index = 0;
+	for_each_child_of_node(node, child_node) {
+		btn->keys[index].key_label = of_get_property(child_node, "label", NULL);
+		if(!strncmp("power", btn->keys[index].key_label, 5) {
+			if (of_property_read_u32(child_node, "linux,code", &btn->keys[index].linux_code)) {
+				usr_msg("error:  cannot read power-key linux,code");
+				return = -EINVAL;
+			}
+			btn->keys[index].pin_num =  of_get_named_gpio(child_node, "pwr-key", 0);
+		    if(!gpio_is_valid(btn->keys[index].pin_num)) {
+        		usr_msg("error: get pwr-key gpio info.  ERROR code %d", btn->keys[index].pin_num);
+        		return -EIO;
+    		}
+			ret = devm_gpio_request_one(dev, btn->keys[index].pin_num, GPIOF_OUT_INIT_HIGH, "pwr-key");
+			if(ret < 0) {
+				usr_msg("error: gpio pwr-key request.");
+				return -EIO;
+			}
+			gpio_direction_input(btn->keys[index].pin_num);
+			// btn->power = btn->keys[index].pin_num;
+			btn->power = &btn->keys[index];
+		} else {
+			// ctrl pin don't have linux,code
+			btn->keys[index].pin_num =  of_get_named_gpio(child_node, "pwr-ctrl-key", 0);
+		    if(!gpio_is_valid(btn->keys[index].pin_num)) {
+        		usr_msg("error: get pwr-ctrl-key gpio info.  ERROR code %d", btn->keys[index].pin_num);
+        		return -EIO;
+    		}
+			ret = devm_gpio_request_one(dev, btn->keys[index].pin_num, GPIOF_OUT_INIT_HIGH, "pwr-ctrl-key");
+			if(ret < 0) {
+				usr_msg("error: gpio pwr-ctrl-key request.");
+				return -EIO;
+			}
+			gpio_direction_output(btn->keys[index].pin_num);
+			// btn->pwr_ctrl = btn->keys[index].pin_num;
+			btn->pwr_ctrl = &btn->keys[index];
+		}
+		index++;
 	}
-    btn->touch_ic_rst = of_get_named_gpio(node, "touch-rst-ctrl", 0);
-    if(!gpio_is_valid(btn->touch_ic_rst)) {
-        usr_msg("error: get touch_ic_rst gpio info.  ERROR code %d", btn->touch_ic_rst);
-        return -EIO;
-    }
-	ret = devm_gpio_request_one(dev, btn->touch_home_btn, GPIOF_OUT_INIT_HIGH, "touch_home_btn");
-	if(ret < 0) {
-		usr_msg("error: gpio touch_home_btn request.");
-		return -EIO;
-	}
-	ret = devm_gpio_request_one(dev, btn->touch_ic_rst, GPIOF_IN, "touch_rst_ctrl");
-    if(ret < 0) {
-		usr_msg("error: touch_ic_rst request.");
-		ret = -EIO;
-		goto out1;
-	}
-	gpio_direction_input(btn->touch_home_btn);
-	gpio_direction_output(btn->touch_ic_rst, 1);
-	usr_msg("requested home_btn number: %d, home_ctrl_rst number: %d", btn->touch_home_btn, btn->touch_ic_rst);
+	usr_msg("requested pwr-key number: %d, pwr-ctrl-key number: %d", btn->power->pin_num , btn->pwr_ctrl->pin_num);
 
 	return 0;
-
-out1:
-	devm_gpio_free(dev, btn->touch_home_btn);
-	return ret;
 }
 
 static int key_probe(struct platform_device *pdev)
@@ -282,8 +221,8 @@ static int key_probe(struct platform_device *pdev)
     btn->inputdev->id.version 	= 0x0100;
     btn->inputdev->evbit[0] = BIT_MASK(EV_KEY);
 
-	set_bit(KEY_VAL, btn->inputdev->keybit);
-	input_set_capability(btn->inputdev, EV_KEY, KEY_VAL);
+	set_bit(btn->power->linux_code, btn->inputdev->keybit);
+	input_set_capability(btn->inputdev, EV_KEY, btn->power->linux_code);
 	
 	ret = input_register_device(btn->inputdev);
 	if(ret){
@@ -291,7 +230,7 @@ static int key_probe(struct platform_device *pdev)
 		goto error1;
 	}
 	
-	ret = keys_get_dts_info(btn, &pdev->dev);
+	ret = keys_get_dts_info(btn, pdev);
 	if(ret < 0) {
 		ret = -ENODEV;
 		usr_msg("error: get gpio dts info");
@@ -306,18 +245,13 @@ static int key_probe(struct platform_device *pdev)
 	flush_workqueue(btn->wq);
 	INIT_WORK(&btn->work, data_handler);
 
-	btn->irq = gpio_to_irq(btn->power);
-	ret = request_irq(btn->irq, usr_key_handler, IRQF_TRIGGER_FALLING | IRQF_TRIGGER_RISING, "powr-key-irq", (void *)btn);
+	btn->irq = gpio_to_irq(btn->power->pin_num);
+	ret = request_irq(btn->irq, usr_key_handler, IRQF_TRIGGER_RISING, "powr-key-irq", (void *)btn);
 	if(ret < 0) {
 		usr_msg("error: request irq");
 		goto error3;
 	}
 	usr_msg("requested irq number = %d", btn->irq);
-// #if HRT_TIMER
-// 	hrt_timer_init(btn, 10, 0);
-// #else
-// 	standard_timer_init(btn, 30);
-// #endif
 	platform_set_drvdata(pdev, (void *) btn);
 	dev_set_drvdata(&pdev->dev, (void *) btn);
 	return 0;
@@ -338,11 +272,6 @@ static int key_remove(struct platform_device *pdev)
 	cancel_work_sync(&btn->work);
 	flush_workqueue(btn->wq);
 	destroy_workqueue(btn->wq);
-// #if HRT_TIMER
-// 	hrt_timer_del(btn);
-// #else
-// 	standard_timer_del(btn);
-// #endif
 	input_unregister_device(btn->inputdev);
 	
 	return 0;
@@ -355,15 +284,9 @@ static int key_suspend(struct device *dev)
 	struct usr_keys_button *btn = dev_get_drvdata(dev);
 	usr_msg("ready to suspend");
 	disable_irq_nosync(btn->irq);
-// #if HRT_TIMER
-// 	hrt_timer_del(btn);
-// #else
-// 	standard_timer_del(btn);
-// #endif
 	cancel_work_sync(&btn->work);
 	flush_workqueue(btn->wq);
-	gpio_set_value(btn->touch_ic_rst, 0);
-	usr_msg("customer key suspended.");
+	usr_msg("key suspended.");
 	return 0;
 }
 
@@ -371,19 +294,13 @@ static int key_resume(struct device *dev)
 {
 	struct usr_keys_button *btn = dev_get_drvdata(dev);
 	usr_msg("ready to resume");
-	chip_cp2610_init(btn);
-// #if HRT_TIMER
-// 	hrt_timer_init(btn, 10, 0);
-// #else
-// 	standard_timer_init(btn, 30);
-// #endif
 	enable_irq(btn->irq);
-	usr_msg("customer key resumed operation.");
+	usr_msg("key resumed operation.");
 	return 0;
 }
 #endif
 
-static SIMPLE_DEV_PM_OPS(customer_keys_pm_ops, key_suspend, key_resume);
+static SIMPLE_DEV_PM_OPS(key_ops, key_suspend, key_resume);
 
 static struct platform_driver keys_pdrv = {
 	.probe		= key_probe,
@@ -391,7 +308,7 @@ static struct platform_driver keys_pdrv = {
 	.driver		= {
 		.name	= KEY_NAME,
 		.owner	= THIS_MODULE,
-		.pm	= &customer_keys_pm_ops,
+		.pm	= &key_ops,
 		.of_match_table = of_match_ptr(key_dts_table),
 	},
 };
