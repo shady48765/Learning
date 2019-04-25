@@ -187,7 +187,7 @@ static int keys_get_dts_info(struct customer_keys * btn, struct platform_device 
 	return 0;
 }
 
-static int key_probe(struct platform_device *pdev)
+static int mcu_ctrl_probe(struct platform_device *pdev)
 {
 	int ret;
 	ret = of_get_child_count(pdev->dev.of_node);
@@ -265,7 +265,7 @@ error1:
    return ret;
 }
 
-static int key_remove(struct platform_device *pdev)
+static int mcu_ctrl_remove(struct platform_device *pdev)
 {
 	struct usr_keys_button *btn = platform_get_drvdata(pdev);
 	
@@ -278,7 +278,7 @@ static int key_remove(struct platform_device *pdev)
 }
 
 
-#ifdef CONFIG_PM	
+#ifdef CONFIG_PM_SLEEP	
 static int key_suspend(struct device *dev)
 {
 	struct usr_keys_button *btn = dev_get_drvdata(dev);
@@ -303,8 +303,8 @@ static int key_resume(struct device *dev)
 static SIMPLE_DEV_PM_OPS(key_ops, key_suspend, key_resume);
 
 static struct platform_driver keys_pdrv = {
-	.probe		= key_probe,
-	.remove		= key_remove,
+	.probe		= mcu_ctrl_probe,
+	.remove		= mcu_ctrl_remove,
 	.driver		= {
 		.name	= KEY_NAME,
 		.owner	= THIS_MODULE,
