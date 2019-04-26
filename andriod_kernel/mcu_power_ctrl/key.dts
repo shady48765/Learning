@@ -13,15 +13,10 @@
         status = "okay";
         pwr-ctrl-keys {
             pwr-key = <&gpio8 RK_PA6 GPIO_ACTIVE_HIGH>;
-            label = "power-ctrl";
+            label = "control";
         };
         pwr-off {
             pwr-key = <&gpio0 RK_PB6 GPIO_ACTIVE_HIGH>;
-            label = "power";
-            linux,code = <116>;
-        };
-        p42 {
-            p42 = <&gpio0 RK_PB6 GPIO_ACTIVE_HIGH>;
             label = "power";
             linux,code = <116>;
         };

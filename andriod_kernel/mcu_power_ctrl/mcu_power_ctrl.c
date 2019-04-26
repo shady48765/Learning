@@ -29,23 +29,13 @@
 #include <linux/wait.h>
 #include <linux/delay.h>
 
+#include <asm/string.h>
 
-// define in /include/uapi/linux/input.h : #define #define KEY_HOMEPAGE 
+#include "./mcu_power_ctrl.h"
 
-// #define KEY_VAL							KEY_POWER	// 116
-// #define KEY_VAL				    		KEY_HOMEPAGE		// android home key
-#define KEY_NAME						"customer_power_keys"
-#define TAG								"<KEY>"
-#define SET_LEVEL						KERN_INFO
-#define usr_msg(fmt, args...)			printk(SET_LEVEL TAG fmt"\n", ##args)
-
-typedef enum {
-	low = 0,
-	high = !low
-}gpio_status;
 
 static struct of_device_id key_dts_table[] = {
-	{ .compatible = "rockchip,power-key", },
+	{ .compatible = "mcu_power_keys", },
 	{ },
 };
 MODULE_DEVICE_TABLE(of, key_dts_table);
@@ -133,20 +123,28 @@ static irqreturn_t usr_key_handler(int irq, void *arg)
     return IRQ_HANDLED; 
 }
 
-static int keys_get_dts_info(struct customer_keys * btn, struct platform_device *pdev)
+static int get_dts_info (struct info * info, struct platform_device *pdev)
 {
 	int ret, index;
 	unsigned int flags;
+	unsigned char temp[];
+	struct info *info;
 	struct device_node *child_node;
 	struct device_node *node = pdev->dev.of_node;
 	if(!node) {
 		usr_msg("error: get dev.of_node");
 		return -ENODEV;
 	}
-	index = 0;
+	info->power_key->key_label = kmalloc(10, GFP_KERNEL);
+	info->contrl_key->key_label = kmalloc(10, GFP_KERNEL);
+	if(!info->power_key->key_label || !info->contrl_key->key_label) {
+		usr_msg("error: key_label malloc");
+	}
 	for_each_child_of_node(node, child_node) {
-		btn->keys[index].key_label = of_get_property(child_node, "label", NULL);
-		if(!strncmp("power", btn->keys[index].key_label, 5) {
+		memset(temp, '\0', sizeof(temp));
+		temp = of_get_property(child_node, "label", NULL);
+		if(!strncmp("power", temp, 5) { // if label is power
+			memcpy(info->power_key->key_label, temp, 5);
 			if (of_property_read_u32(child_node, "linux,code", &btn->keys[index].linux_code)) {
 				usr_msg("error:  cannot read power-key linux,code");
 				return = -EINVAL;
@@ -196,83 +194,83 @@ static int mcu_ctrl_probe(struct platform_device *pdev)
 		return ret;
 	}
 	
-	struct customer_keys * btn = devm_kmalloc(&pdev->dev, sizeof(struct customer_keys), GFP_KERNEL);
-	if(IS_ERR(btn)) {
+	struct info * info = devm_kmalloc(&pdev->dev, sizeof(struct info), GFP_KERNEL);
+	if(IS_ERR(info)) {
 		usr_msg("error: devm_kmalloc");
 		return -ENOMEM;
 	}
-	mutex_init(&btn->lock);
+	mutex_init(&info->lock);
 
-	platform_set_drvdata(pdev, btn);
-	dev_set_drvdata(&pdev->dev, btn);
+	platform_set_drvdata(pdev, info);
+	dev_set_drvdata(&pdev->dev, info);
 	
-	btn->inputdev = devm_input_allocate_device(&pdev->dev);
-	if(IS_ERR(btn->inputdev)){
+	info->inputdev = devm_input_allocate_device(&pdev->dev);
+	if(IS_ERR(info->inputdev)){
 		usr_msg("error: input_allocate_device failed!");
 		return -ENODEV;
 	}
 
-	btn->inputdev->name 		= KEY_NAME;				
-	btn->inputdev->phys 		= KEY_NAME;	
-	btn->inputdev->dev.parent 	= &pdev->dev;
-	btn->inputdev->id.bustype 	= BUS_HOST;		
-    btn->inputdev->id.vendor 	= 0x0001;
-    btn->inputdev->id.product 	= 0x0001;
-    btn->inputdev->id.version 	= 0x0100;
-    btn->inputdev->evbit[0] = BIT_MASK(EV_KEY);
+	info->inputdev->name 		= KEY_NAME;				
+	info->inputdev->phys 		= KEY_NAME;	
+	info->inputdev->dev.parent 	= &pdev->dev;
+	info->inputdev->id.bustype 	= BUS_HOST;		
+    info->inputdev->id.vendor 	= 0x0001;
+    info->inputdev->id.product 	= 0x0001;
+    info->inputdev->id.version 	= 0x0100;
+    info->inputdev->evbit[0] = BIT_MASK(EV_KEY);
 
-	set_bit(btn->power->linux_code, btn->inputdev->keybit);
-	input_set_capability(btn->inputdev, EV_KEY, btn->power->linux_code);
+	set_bit(info->power->linux_code, info->inputdev->keybit);
+	input_set_capability(info->inputdev, EV_KEY, info->power->linux_code);
 	
-	ret = input_register_device(btn->inputdev);
+	ret = input_register_device(info->inputdev);
 	if(ret){
 		usr_msg("error: input register device failed!");
 		goto error1;
 	}
 	
-	ret = keys_get_dts_info(btn, pdev);
+	ret = get_dts_info(info, pdev);
 	if(ret < 0) {
 		ret = -ENODEV;
 		usr_msg("error: get gpio dts info");
 		goto error2;
 	}
 
-	btn->wq = create_singlethread_workqueue("key_data_handler");
-	if (!btn->wq) {
+	info->wq = create_singlethread_workqueue("mcu_key_handler");
+	if (!info->wq) {
 		usr_msg("error: can not create workqueue");
 		goto error2;
 	}
-	flush_workqueue(btn->wq);
-	INIT_WORK(&btn->work, data_handler);
+	flush_workqueue(info->wq);
+	INIT_WORK(&info->work, data_handler);
 
-	btn->irq = gpio_to_irq(btn->power->pin_num);
-	ret = request_irq(btn->irq, usr_key_handler, IRQF_TRIGGER_RISING, "powr-key-irq", (void *)btn);
+	info->irq = gpio_to_irq(info->power->pin_num);
+	ret = request_irq(info->irq, usr_key_handler, IRQF_TRIGGER_RISING, "mcu-powr-key-irq", (void *)info);
 	if(ret < 0) {
 		usr_msg("error: request irq");
 		goto error3;
 	}
-	usr_msg("requested irq number = %d", btn->irq);
-	platform_set_drvdata(pdev, (void *) btn);
-	dev_set_drvdata(&pdev->dev, (void *) btn);
+	usr_msg("requested irq number = %d", info->irq);
+	platform_set_drvdata(pdev, (void *) info);
+	dev_set_drvdata(&pdev->dev, (void *) info);
 	return 0;
 
 error3:
-	destroy_workqueue(btn->wq);
+	destroy_workqueue(info->wq);
 error2:
-	input_put_device(btn->inputdev);
+	input_put_device(info->inputdev);
 error1:
-   input_free_device(btn->inputdev);
+   input_free_device(info->inputdev);
    return ret;
 }
 
 static int mcu_ctrl_remove(struct platform_device *pdev)
 {
-	struct usr_keys_button *btn = platform_get_drvdata(pdev);
+	struct info *info = platform_get_drvdata(pdev);
 	
-	cancel_work_sync(&btn->work);
-	flush_workqueue(btn->wq);
-	destroy_workqueue(btn->wq);
-	input_unregister_device(btn->inputdev);
+	cancel_work_sync(&info->work);
+	flush_workqueue(info->wq);
+	destroy_workqueue(info->wq);
+	input_unregister_device(info->inputdev);
 	
 	return 0;
 }
@@ -281,21 +279,19 @@ static int mcu_ctrl_remove(struct platform_device *pdev)
 #ifdef CONFIG_PM_SLEEP	
 static int key_suspend(struct device *dev)
 {
-	struct usr_keys_button *btn = dev_get_drvdata(dev);
+	struct info *info = dev_get_drvdata(dev);
 	usr_msg("ready to suspend");
-	disable_irq_nosync(btn->irq);
-	cancel_work_sync(&btn->work);
-	flush_workqueue(btn->wq);
-	usr_msg("key suspended.");
+	disable_irq_nosync(info->irq);
+	cancel_work_sync(&info->work);
+	flush_workqueue(info->wq);
 	return 0;
 }
 
 static int key_resume(struct device *dev)
 {
-	struct usr_keys_button *btn = dev_get_drvdata(dev);
+	struct info *info = dev_get_drvdata(dev);
 	usr_msg("ready to resume");
-	enable_irq(btn->irq);
-	usr_msg("key resumed operation.");
+	enable_irq(info->irq);
 	return 0;
 }
 #endif

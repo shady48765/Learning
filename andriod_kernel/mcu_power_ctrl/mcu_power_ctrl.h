@@ -37,7 +37,7 @@
 
 // #define KEY_VAL							KEY_POWER	// 116
 // #define KEY_VAL				    		KEY_HOMEPAGE		// android home key
-#define KEY_NAME						"customer_power_keys"
+#define KEY_NAME						"mcu_power_key"
 #define TAG								"<KEY>"
 #define SET_LEVEL						KERN_INFO
 #define usr_msg(fmt, args...)			printk(SET_LEVEL TAG fmt"\n", ##args)
@@ -51,28 +51,28 @@ typedef enum {
 /*--------------------------------------------------------------------------------------------------------------*/
 #define HRT_TIMER				0
 
-#define MS_TO_NS(x) (x * 1000000)      // ms to ns
+#define MS_TO_NS(x) 			((x) * (1000000))      // ms to ns
 
-struct keys {
+
+struct key_info {
 	char *key_label;
 	int pin_num;
 	unsigned int linux_code;
 	
 };
-struct customer_keys {
-	struct keys 				* pwr_ctrl;
-	struct keys 				* power;
+struct info {
+	struct keys 				* power_key;
+	struct keys 				* contrl_key;
+
 	unsigned int 				irq;
 	struct input_dev 			*inputdev;
 	struct mutex 				lock;
 	struct workqueue_struct 	* wq;
 	struct work_struct			work;
+	struct timer_list tim;
 
-	struct keys 				keys[2];
+	int trigger_flag;
 };
 
-struct timer_list tim;
-
-static int trigger_flag;
 
 #endif
