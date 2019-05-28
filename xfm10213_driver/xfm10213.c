@@ -1,43 +1,13 @@
-/**********************************************************************************
-    xfm10213@3e {
-		compatible = "xfm10213";
-		status = "okay";
-		reg = <0x3e>;
-        xfm10213-irq-gpio = <&gpio5 RK_PB2 GPIO_ACTIVE_HIGH>;
-        xfm10213-irq-trigger-level = "high";
-	};
-***********************************************************************************/
-#include <linux/kernel.h>
-#include <linux/module.h>
-#include <linux/err.h>
-#include <linux/i2c.h>
-#include <linux/platform_data/fsa9480.h>
-#include <linux/irq.h>
-#include <linux/interrupt.h>
-#include <linux/workqueue.h>
-#include <linux/platform_device.h>
-#include <linux/slab.h>
-#include <linux/pm_runtime.h>
-#include <linux/of.h>
 
+#include "./xfm10213.h"
 
-#define XFM10213_DEV_NAME				"xfm10213_device"
+static int upgrade_finished_mark;
+static int xfm10213_update_flag;
 
-#define TAG								" <XFM10213> "
-#define SET_LEVEL						KERN_INFO
-#define usr_msg(fmt, args...)			printk(SET_LEVEL TAG fmt"\n", ##args)
+static DECLARE_WAIT_QUEUE_HEAD(xfm10213_upgrade_work_head);
 
-struct xfm10213_info {
-	int irq_pin;
-	int irq_num;
-	int irq_trigger_level;
-	
-	unsigned char addr;
-	mutex lock;
-	
-	struct i2c_client * client;
-	struct device_node * node;
-}
+static void xfm10213_init_worker(struct work_struct *work);
+static DECLARE_WORK(xfm10213_init_work, xfm10213_init_worker);
 
 
 static const struct of_device_id xfm10213_match_table[] = {
@@ -46,192 +16,33 @@ static const struct of_device_id xfm10213_match_table[] = {
 };
 MODULE_DEVICE_TABLE(of, xfm10213_match_table);
 
-
-static int fsa9480_write_reg(struct i2c_client *client,
-		int reg, int value)
+static irqreturn_t xfm10213_irq_handler(int irq, void *data)
 {
-	int ret;
-
-	ret = i2c_smbus_write_byte_data(client, reg, value);
-
-	if (ret < 0)
-		dev_err(&client->dev, "%s: err %d\n", __func__, ret);
-
-	return ret;
-}
-
-static int fsa9480_read_reg(struct i2c_client *client, int reg)
-{
-	int ret;
-
-	ret = i2c_smbus_read_byte_data(client, reg);
-
-	if (ret < 0)
-		dev_err(&client->dev, "%s: err %d\n", __func__, ret);
-
-	return ret;
-}
-
-static int fsa9480_read_irq(struct i2c_client *client, int *value)
-{
-	int ret;
-
-	ret = i2c_smbus_read_i2c_block_data(client,
-			FSA9480_REG_INT1, 2, (u8 *)value);
-	*value &= 0xffff;
-
-	if (ret < 0)
-		dev_err(&client->dev, "%s: err %d\n", __func__, ret);
-
-	return ret;
-}
-
-/**----------------------------------------------------------------------------*/
-static ssize_t fsa9480_get_switch(char *buf)
-{
-	struct fsa9480_usbsw *usbsw = chip;
-	struct i2c_client *client = usbsw->client;
-	unsigned int value;
-
-	value = fsa9480_read_reg(client, FSA9480_REG_MANSW1);
-
-	if (value == SW_VAUDIO)
-		return sprintf(buf, "VAUDIO\n");
-	else if (value == SW_UART)
-		return sprintf(buf, "UART\n");
-	else if (value == SW_AUDIO)
-		return sprintf(buf, "AUDIO\n");
-	else if (value == SW_DHOST)
-		return sprintf(buf, "DHOST\n");
-	else if (value == SW_AUTO)
-		return sprintf(buf, "AUTO\n");
-	else
-		return sprintf(buf, "%x", value);
-}
-
-static ssize_t fsa9480_show_device(struct device *dev,
-				   struct device_attribute *attr,
-				   char *buf)
-{
-	struct fsa9480_usbsw *usbsw = dev_get_drvdata(dev);
-	struct i2c_client *client = usbsw->client;
-	int dev1, dev2;
-
-	dev1 = fsa9480_read_reg(client, FSA9480_REG_DEV_T1);
-	dev2 = fsa9480_read_reg(client, FSA9480_REG_DEV_T2);
-
-	if (!dev1 && !dev2)
-		return sprintf(buf, "NONE\n");
-
-	/* USB */
-	if (dev1 & DEV_T1_USB_MASK || dev2 & DEV_T2_USB_MASK)
-		return sprintf(buf, "USB\n");
-
-	/* UART */
-	if (dev1 & DEV_T1_UART_MASK || dev2 & DEV_T2_UART_MASK)
-		return sprintf(buf, "UART\n");
-
-	/* CHARGER */
-	if (dev1 & DEV_T1_CHARGER_MASK)
-		return sprintf(buf, "CHARGER\n");
-
-	/* JIG */
-	if (dev2 & DEV_T2_JIG_MASK)
-		return sprintf(buf, "JIG\n");
-
-	return sprintf(buf, "UNKNOWN\n");
-}
-
-static ssize_t fsa9480_show_manualsw(struct device *dev,
-		struct device_attribute *attr, char *buf)
-{
-	return fsa9480_get_switch(buf);
-
-}
-
-static ssize_t fsa9480_set_manualsw(struct device *dev,
-				    struct device_attribute *attr,
-				    const char *buf, size_t count)
-{
-	fsa9480_set_switch(buf);
-
-	return count;
-}
-
-static DEVICE_ATTR(device, S_IRUGO, fsa9480_show_device, NULL);
-static DEVICE_ATTR(switch, S_IRUGO | S_IWUSR,
-		fsa9480_show_manualsw, fsa9480_set_manualsw);
-
-static struct attribute *fsa9480_attributes[] = {
-	&dev_attr_device.attr,
-	&dev_attr_switch.attr,
-	NULL
-};
-
-static const struct attribute_group fsa9480_group = {
-	.attrs = fsa9480_attributes,
-};
-/**----------------------------------------------------------------------------*/
-static irqreturn_t fsa9480_irq_handler(int irq, void *data)
-{
-	struct fsa9480_usbsw *usbsw = data;
-	struct i2c_client *client = usbsw->client;
-	int intr;
-
-	/* clear interrupt */
-	fsa9480_read_irq(client, &intr);
-
-	/* device detection */
-	fsa9480_detect_dev(usbsw, intr);
-
+	struct xfm10213_info *info = data;
+	struct i2c_client *client = info->client;
+	usr_msg("moved in function: %s", __func__);
+	upgrade_finished_mark = 1;
+	disable_irq(info->irq_num);
+	schedule_work(xfm10213_irq_init);
 	return IRQ_HANDLED;
 }
 
-static int fsa9480_irq_init(struct fsa9480_usbsw *usbsw)
+static int xfm10213_irq_request(struct xfm10213_info *info)
 {
 	struct fsa9480_platform_data *pdata = usbsw->pdata;
 	struct i2c_client *client = usbsw->client;
 	int ret;
-	int intr;
-	unsigned int ctrl = CON_MASK;
 
-	/* clear interrupt */
-	fsa9480_read_irq(client, &intr);
-
-	/* unmask interrupt (attach/detach only) */
-	fsa9480_write_reg(client, FSA9480_REG_INT1_MASK, 0xfc);
-	fsa9480_write_reg(client, FSA9480_REG_INT2_MASK, 0x1f);
-
-	usbsw->mansw = fsa9480_read_reg(client, FSA9480_REG_MANSW1);
-
-	if (usbsw->mansw)
-		ctrl &= ~CON_MANUAL_SW;	/* Manual Switching Mode */
-
-	fsa9480_write_reg(client, FSA9480_REG_CTRL, ctrl);
-
-	if (pdata && pdata->cfg_gpio)
-		pdata->cfg_gpio();
-
-	if (client->irq) {
-		ret = request_threaded_irq(client->irq, NULL,
-				fsa9480_irq_handler,
-				IRQF_TRIGGER_FALLING | IRQF_ONESHOT,
-				"fsa9480 micro USB", usbsw);
-		if (ret) {
-			dev_err(&client->dev, "failed to request IRQ\n");
-			return ret;
-		}
-
-		if (pdata)
-			device_init_wakeup(&client->dev, pdata->wakeup);
+	usr_msg("moved in function: %s", __func__);
+	// using IRQF_ONESHOT to keep thread_handler full exit before accept next interrupt.
+	ret = request_threaded_irq(client->irq, NULL, xfm10213_irq_handler, IRQF_TRIGGER_RISING | IRQF_ONESHOT, "fsa9480 micro USB", usbsw);
+	if (ret) {
+		usr_msg("failed to request IRQ");
+		return ret;
 	}
-
 	return 0;
 }
-static void xfm10213_chip_init(struct i2c_client *client, struct xfm10213_info * info)
-{
-	
-}
+
 
 static int xfm10213_get_dts_info(struct i2c_client * client, struct xfm10213_info * info)
 {
@@ -240,12 +51,14 @@ static int xfm10213_get_dts_info(struct i2c_client * client, struct xfm10213_inf
 	char temp_str[20] = 0;
 	
 	usr_msg("moved in function: %s", __func__);
-	info->node = client->dev.of_node;
+	
+info->node = client->dev.of_node;
 	if(!info->node) {
 		usr_msg("cannot find device node");
 		return -ENODEV;
 	}
-	ret = of_get_named_gpio_flags(info->node, "xfm10213-irq-gpio", 0, &flags);
+	ret = of_get_named_gpio_flags(
+info->node, "xfm10213-irq-gpio", 0, &flags);
 	if(ret < 0) {
 		usr_msg("error: get xfm10213-irq-gpio");
 		return -EIO;
@@ -272,59 +85,139 @@ static int xfm10213_get_dts_info(struct i2c_client * client, struct xfm10213_inf
 	
 }
 
+static ssize_t xfm10213_update_set(struct device *dev, struct device_attribute *attr, const char *buf, size_t count)
+{
+	usr_msg("moved in function: %s", __func__);
+	return 0;
+}
+
+static ssize_t xfm10213_wrok_mode_show(struct device *dev, struct device_attribute *attr, char *buf)
+{
+	usr_msg("moved in function: %s", __func__);
+	return 0;
+}
+static ssize_t xfm10213_wrok_mode_set(struct device *dev, struct device_attribute *attr, const char *buf, size_t count)
+{
+	usr_msg("moved in function: %s", __func__);
+	return 0;
+}
+static ssize_t xfm10213_mic_channel_show(struct device *dev, struct device_attribute *attr, char *buf)
+{
+	usr_msg("moved in function: %s", __func__);
+	return 0;
+}
+static ssize_t xfm10213_mic_channel_set(struct device *dev, struct device_attribute *attr, const char *buf, size_t count)
+{
+	usr_msg("moved in function: %s", __func__);
+	return 0;
+}
+static ssize_t xfm10213_mic_gain_show(struct device *dev, struct device_attribute *attr, char *buf)
+{
+	usr_msg("moved in function: %s", __func__);
+	return 0;
+}
+static ssize_t xfm10213_mic_gain_set(struct device *dev, struct device_attribute *attr, const char *buf, size_t count)
+{
+	usr_msg("moved in function: %s", __func__);
+	return 0;
+}
+static ssize_t xfm10213_uart_show(struct device *dev, struct device_attribute *attr, char *buf)
+{
+	usr_msg("moved in function: %s", __func__);
+	return 0;
+}
+static ssize_t xfm10213_uart_set(struct device *dev, struct device_attribute *attr, const char *buf, size_t count)
+{
+	usr_msg("moved in function: %s", __func__);
+	return 0;
+}
+static ssize_t xfm10213_out_gain_show(struct device *dev, struct device_attribute *attr, char *buf)
+{
+	usr_msg("moved in function: %s", __func__);
+	return 0;
+}
+static ssize_t xfm10213_out_gain_set(struct device *dev, struct device_attribute *attr, const char *buf, size_t count)
+{
+	usr_msg("moved in function: %s", __func__);
+	return 0;
+}
+static ssize_t xfm10213_i2s_mode_show(struct device *dev, struct device_attribute *attr, char *buf)
+{
+	usr_msg("moved in function: %s", __func__);
+	return 0;
+}
+static ssize_t xfm10213_i2s_mode_set(struct device *dev, struct device_attribute *attr, const char *buf, size_t count)
+{
+	usr_msg("moved in function: %s", __func__);
+	return 0;
+}
+
+static DEVICE_ATTR(xfm10213_update, S_IRUGO, NULL, xfm10213_update_set);
+static DEVICE_ATTR(xfm10213_wrok_mode, S_IRUGO, xfm10213_wrok_mode_show, xfm10213_wrok_mode_set);
+static DEVICE_ATTR(xfm10213_mic_channel, S_IRUGO, xfm10213_mic_channel_show, xfm10213_mic_channel_set);
+static DEVICE_ATTR(xfm10213_mic_gain, S_IRUGO, xfm10213_mic_gain_show, xfm10213_mic_gain_set);
+static DEVICE_ATTR(xfm10213_uart, S_IRUGO, xfm10213_uart_show, xfm10213_uart_set);
+static DEVICE_ATTR(xfm10213_out_gain, S_IRUGO, xfm10213_out_gain_show, xfm10213_out_gain_set);
+static DEVICE_ATTR(xfm10213_i2s_mode, S_IRUGO, xfm10213_i2s_mode_show, xfm10213_i2s_mode_set);
+
+static struct attribute * xfm10213_attributes[] = {
+	&dev_attr_xfm10213_update.attr,
+	&dev_attr_xfm10213_wrok_mode.attr,
+	&dev_attr_xfm10213_mic_channel.attr,
+	&dev_attr_xfm10213_mic_gain.attr,
+	&dev_attr_xfm10213_uart.attr,
+	&dev_attr_xfm10213_out_gain.attr,
+	&dev_attr_xfm10213_i2s_mode.attr,
+	NULL,
+};
+static const struct attribute_group xfm10213_attribute_group = {
+	.attrs = xfm10213_attributes,
+};
+
+static void xfm10213_update_protocal(struct work_struct *work)
+{
+
+    wake_up_interruptible(&xfm10213_upgrade_work_head);
+    usr_msg("queue woke-up, xfm10213_update_flag = %d", xfm10213_update_flag);
+    xfm10213_update_flag= 0;
+    schedule();
+	
+    
+}
+
+void xfm10213_update_waitqueue_init(void)
+{
+    init_waitqueue_head(&xfm10213_upgrade_work_head);
+    INIT_WORK(&xfm10213_init, xfm10213_update_protocal);
+    schedule_work(&xfm10213_init);
+    wait_event_interruptible(xfm10213_upgrade_work_head, xfm10213_update_flag != 0);
+    usr_msg("waitqueue, xfm10213_update_flag =  %d", xfm10213_update_flag);
+}
+	
 static int xfm10213_probe(struct i2c_client *client, const struct i2c_device_id *id)
 {
-	struct i2c_adapter *adapter = to_i2c_adapter(client->dev.parent);
-	struct fsa9480_usbsw *usbsw;
-	int ret = 0;
-
+	int ret;
+	// struct i2c_adapter *adapter = to_i2c_adapter(client->dev.parent);
+	struct i2c_adapter * adapter;
+	struct xfm10213_info * info = devm_kmalloc(&client->dev, sizeof(struct xfm10213_info), GFP_KERNEL);
 	if (!i2c_check_functionality(adapter, I2C_FUNC_SMBUS_BYTE_DATA)) {
 		usr_msg("i2c check failed.");
 		return -EIO;
 	}
 
-	usbsw = kzalloc(sizeof(struct fsa9480_usbsw), GFP_KERNEL);
-	if (!usbsw) {
-		dev_err(&client->dev, "failed to allocate driver data\n");
-		return -ENOMEM;
+	ret = xfm10213_get_dts_info(client, info)
+	if(ret < 0) {
+		usr_msg("error: get dts info");
+		return -EIO;
 	}
+	info->client = client;
+    mutex_init(&info->lock);
 
-	usbsw->client = client;
-	usbsw->pdata = client->dev.platform_data;
-
-	chip = usbsw;
-
-	i2c_set_clientdata(client, usbsw);
-
-	ret = fsa9480_irq_init(usbsw);
-	if (ret)
-		goto fail1;
-
-	ret = sysfs_create_group(&client->dev.kobj, &fsa9480_group);
-	if (ret) {
-		dev_err(&client->dev,
-				"failed to create fsa9480 attribute group\n");
-		goto fail2;
-	}
-
-	/* ADC Detect Time: 500ms */
-	fsa9480_write_reg(client, FSA9480_REG_TIMING1, 0x6);
-
-	if (chip->pdata->reset_cb)
-		chip->pdata->reset_cb();
-
-	/* device detection */
-	fsa9480_detect_dev(usbsw, INT_ATTACH);
-
-	pm_runtime_set_active(&client->dev);
-
+	xfm10213_update_waitqueue_init();
+	
+	sysfs_create_group(&client->dev.kobj, &xfm10213_attribute_group);
 	return 0;
 
-fail2:
-	if (client->irq)
-		free_irq(client->irq, usbsw);
-fail1:
-	kfree(usbsw);
 	return ret;
 }
 
@@ -340,31 +233,11 @@ static int xfm10213_remove(struct i2c_client *client)
 	return 0;
 }
 
-static int xfm10213_detect(struct i2c_client *client, struct i2c_board_info *info)
-{
-	struct i2c_adapter *adapter = client->adapter;
-	int ret;
-
-	printk(DEBUG_INIT, "%s enter \n", __func__);
-	
-	if (!i2c_check_functionality(adapter, I2C_FUNC_SMBUS_BYTE_DATA)){
-		dprintk(DEBUG_INIT, "%s i2c_check_functionality error \n", __func__);
-		return -ENODEV;
-	}
-            
-	if (twi_id == adapter->nr) {
-			client->addr = i2c_address[i2c_num];
-			dprintk(DEBUG_INIT,"%s:addr= 0x%x,i2c_num:%d\n",__func__,client->addr,i2c_num);
-			ret = i2c_smbus_read_byte_data(client,VC8536_CHIP_ID_REG);
-			dprintk(DEBUG_INIT,"Read ID value is :%#x",ret);
-			strlcpy(info->type, SENSOR_NAME, I2C_NAME_SIZE);
-			return 0; 
-        
-	} else {
-			dprintk(DEBUG_INIT, "%s error adapter->nr==%d \n", __func__,adapter->nr);
-			return -ENODEV;
-	}
-}
+static const struct i2c_device_id xfm10213_dev_id[] = {
+    {"xfm10213", 0},
+    {/*keep this*/}
+};
+MODULE_DEVICE_TABLE(i2c, xfm10213_dev_id);
 
 static struct i2c_driver xfm10213_driver = {
 	.driver = {
@@ -374,7 +247,7 @@ static struct i2c_driver xfm10213_driver = {
 	},
 	.probe = xfm10213_probe,
 	.remove = xfm10213_remove,
-	.detect = xfm10213_detect,
+	.id = xfm10213_dev_id,
 };
 
 static int __init xfm10213_init(void)
