@@ -28,6 +28,7 @@
 #include <linux/workqueue.h>
 #include <linux/string.h>
 #include <linux/delay.h>
+#include <linux/jiffies.h>
 
 #define XFM10213_DEV_NAME				"xfm10213"
 
@@ -123,6 +124,7 @@ struct xfm10213_info {
 	struct device_node * node;
 	struct proc_dir_entry * xfm10213_proc_entry;
 	struct work_struct * xfm10213_upgrade_work;
+	struct delayed_work * xfm10213_init_work;
 };
 
 
