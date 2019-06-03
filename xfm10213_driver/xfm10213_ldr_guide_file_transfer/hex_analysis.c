@@ -78,7 +78,7 @@ int main(int argc, char **argv) {
         write_buff[write_counter + 1] = read_buff[1];
         write_buff[write_counter + 2] = ',';
         write_counter += 3;
-        if(write_counter > 3 * 10) {
+        if(write_counter >= 3 * 10) {
             write(write_fd, write_buff, write_counter);
             memset(write_buff, '\0', write_counter);
             write_counter = 0;
