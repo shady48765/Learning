@@ -1,32 +1,3 @@
-// #include <linux/module.h>
-// #include <linux/init.h>
-// #include <linux/fs.h>
-// #include <linux/interrupt.h>
-// #include <linux/irq.h>
-// #include <linux/sched.h>
-// #include <linux/pm.h>
-// #include <linux/sysctl.h>
-// #include <linux/proc_fs.h>
-// #include <linux/delay.h>
-// #include <linux/platform_device.h>
-// #include <linux/input.h>
-// #include <linux/adc.h>
-// #include <linux/slab.h>
-// #include <linux/wakelock.h>
-
-// // #include <linux/iio/iio.h>
-// // #include <linux/iio/machine.h>
-// // #include <linux/iio/driver.h>
-// // #include <linux/iio/consumer.h>
-
-// #include <linux/gpio.h>
-// #include <linux/of.h>
-// #include <linux/of_irq.h>
-// #include <linux/of_gpio.h>
-// #include <linux/of_platform.h>
-// #include <linux/rk_keys.h>
-/** -------------------------------------------------------------------------------------------------------------- */
-
 #include <linux/module.h>
 #include <linux/init.h>
 #include <linux/fs.h>
@@ -44,29 +15,29 @@
 #include <linux/gpio.h>
 #include <linux/of_platform.h>
 #include <linux/of_gpio.h>
+#include <linux/of_irq.h>
 #include <linux/spinlock.h>
 #include <linux/io.h>
 #include <uapi/linux/input.h>
 #include <linux/workqueue.h>
 #include <linux/wait.h>
 #include <linux/delay.h>
+#include <linux/sysfs.h>
+#include <linux/device.h>
+#include <linux/kernel.h>
 
-
-// define in /include/uapi/linux/input.h : #define #define KEY_HOMEPAGE 
-
-// define KEY_VAL							KEY_BACK
-// #define KEY_VAL				    		KEY_HOMEPAGE		// android home key
-#define KEY_VAL 						KEY_POWER
-
-#define KEY_NAME						"r100u_mcu_power"
-
+// #define KEY_VAL							251	//0xFB
+#define KEY_VAL							KEY_RIGHTMETA
 #define TAG								" <MCU-KEY> "
 #define SET_LEVEL						KERN_INFO
 #define usr_msg(fmt, args...)			printk(SET_LEVEL TAG fmt"\n", ##args)
 
-#define  MCU_DEV_NAME 				    "r100u_mcu-key"
+#define KEY_NAME						"r100u_mcu_key"
+#define  MCU_DEV_NAME 				    "r100u-mcu-dev"
 
-#define HRT_TIMER				        1
+#define HRT_TIMER				        0
+#define DIRECT_CREATE_SYSFS				0
+
 #define MS_TO_NS(x) (x * 1000000)      // ms to ns
 
 typedef enum {
@@ -81,8 +52,11 @@ typedef enum {
 
 static int trigger_flag;
 
+static int sn8p27113aa_set_value(int gpio, gpio_dir dir, gpio_status value);
+static irqreturn_t mcu_trigger_handler(int irq, void *arg);
+
 static const struct of_device_id mcu_key_match_table[] = {
-	{ .compatible = "rockchip,r100u-mcu-key", .data = NULL},
+	{ .compatible = "rockchip,r100u-mcu-key",},
 	{},
 };
 MODULE_DEVICE_TABLE(of, mcu_key_match_table);
@@ -97,6 +71,7 @@ struct sn8p27113aa_info {
 	struct mutex 				lock;
 	struct workqueue_struct 	* wq;
 	struct work_struct			work;
+	int key_repeat;
 #if HRT_TIMER
 	/** hrt timer --------------------------------------------------*/
 	ktime_t						tim_period;
@@ -104,6 +79,102 @@ struct sn8p27113aa_info {
 #endif
 	struct mutex				tim_lock;
 };
+
+/**----------------------------------------------------------------------------------*/
+#if DIRECT_CREATE_SYSFS
+static struct kobject * sn8p27113aa_kobject;
+
+struct d_attr {
+    struct attribute attr;
+    int value; /* This is our data */
+};
+
+static struct d_attr data_show = {
+    .attr.name = "read_loops",
+    .attr.mode = 0644,
+    .value = 0,
+};
+
+static struct d_attr data_write = {
+    .attr.name = "change_ticks",
+    .attr.mode = 0644,
+    .value = 0,
+};
+
+static struct attribute * attrs[] = {
+    &data_show.attr,
+    &data_write.attr,
+    NULL
+};
+static ssize_t sn8p27113aa_status_show(struct kobject *kobj, struct attribute *attr, char *buf)
+{
+    struct d_attr *da = container_of(attr, struct d_attr, attr);
+    usr_msg( "show called (%s), loop_counter = %d\n", da->attr.name, gpio_get_value(btn->mcu_p53_gpio););
+	da->value = loop_counter;
+    return scnprintf(buf, PAGE_SIZE, "%s: %d\n", da->attr.name, da->value);
+}
+
+static ssize_t sn8p27113aa_poweroff_set(struct kobject *kobj, struct attribute *attr, const char *buf, size_t len)
+{
+    struct d_attr *da = container_of(attr, struct d_attr, attr);
+	
+    sscanf(buf, "%d", &da->value);
+	if(da->value <= 0 || da->value >= 65535)
+		return sizeof(int);
+	ticks = da->value;
+    usr_msg("timer ticks has been setted to %d\n", da->value);
+    return sizeof(int);
+}
+
+static struct sysfs_ops ops = {
+    .show  = sn8p27113aa_status_show,
+    .store = sn8p27113aa_poweroff_set,
+};
+
+static struct kobj_type k_type = {
+    .sysfs_ops     = &ops,
+    .default_attrs = attrs,
+};
+	
+static int sn8p27113aa_create_sysfs(struct device * dev)
+{
+	int ret;
+	usr_msg("moved in function: %s", __func__);
+	sn8p27113aa_kobject = kzalloc(sizeof(struct kobject), GFP_KERNEL);
+	if(IS_ERR(sn8p27113aa_kobject)) {
+		err_msg("error : foo_kobject kzalloc");
+		return -ENOMEM;
+	}
+	// kobject_init(struct kobject * kobj, struct kobj_type * ktype)
+	kobject_init(sn8p27113aa_kobject, &k_type);
+     // parent is NULL, create folder under /sys/ direction
+    ret = kobject_add(sn8p27113aa_kobject, NULL, "%s", MCU_DEV_NAME);
+	if(0 != ret ) {
+		ret = -1;
+		err_msg("error: kobject_add() failed\n");
+		kobject_put(sn8p27113aa_kobject);
+		sn8p27113aa_kobject = NULL;
+		goto out;
+	}
+	return ret;
+out:
+	return ret;
+}
+
+/**
+ * @brief delete created sysfs, when driver removed
+ * 
+ * @param dev 
+ */
+static void sn8p27113aa_remove_sysfs(struct device * dev)
+{
+	usr_msg("sn8p27113aa remove sysfs");
+	kobject_put(sn8p27113aa_kobject);
+	sn8p27113aa_kobject = NULL;
+}
+
+#endif /** end of #if DIRECT_CREATE_SYSFS */
+/**----------------------------------------------------------------------------------*/
 
 static int sn8p27113aa_set_value(int gpio, gpio_dir dir, gpio_status value)
 {
@@ -117,7 +188,35 @@ static int sn8p27113aa_set_value(int gpio, gpio_dir dir, gpio_status value)
 	return ret;
 }
 
-static int sn8p27113aa_init(struct sn8p27113aa_info * info)
+#if 0
+static int sn8p27113aa_normal_poweroff_loop(struct sn8p27113aa_info * info)
+{
+	usr_msg("moved in function: %s, ready to run power off loop", __func__);
+	sn8p27113aa_set_value(info->mcu_p42_gpio, out, low);
+	return 0;
+}
+#endif
+
+#if 1 // close for clean build warning
+static int sn8p27113aa_force_poweroff_loop(struct sn8p27113aa_info * info)
+{
+	usr_msg("moved in function: %s, ready to run power off loop", __func__);
+	sn8p27113aa_set_value(info->mcu_p42_gpio, out, low);
+	usr_msg("in function: %s, step 1", __func__);
+	mdelay(100);
+	sn8p27113aa_set_value(info->mcu_p42_gpio, out, high);
+	usr_msg("in function: %s, step 2", __func__);
+	mdelay(50);
+	sn8p27113aa_set_value(info->mcu_p42_gpio, out, low);
+	usr_msg("in function: %s, step 3", __func__);
+	mdelay(100);
+	sn8p27113aa_set_value(info->mcu_p42_gpio, out, high);
+	usr_msg("in function: %s, step 4", __func__);
+	return 0;
+}
+#endif
+
+static int sn8p27113aa_chip_init(struct sn8p27113aa_info * info)
 {
 	int ret;
 	ret = sn8p27113aa_set_value(info->mcu_p42_gpio, out, high);
@@ -126,48 +225,51 @@ static int sn8p27113aa_init(struct sn8p27113aa_info * info)
 		usr_msg("gpio: [%d], gpio: [%d] set direction failed.", info->mcu_p42_gpio, info->mcu_p53_gpio);
 		return ret; 
 	}
-
+	info->key_repeat = 0;
 	usr_msg("gpio set pass, current mcu_p53_gpio = %d", gpio_get_value(info->mcu_p53_gpio));
 	return 0;
 }
 
 static void data_handler(struct work_struct * work)
 {
-	int key_val;
+	int val;
 	struct sn8p27113aa_info * btn = container_of(work, struct sn8p27113aa_info, work);
 	if(IS_ERR(btn)) {
 		usr_msg("error: get struct usr_keys_button in function: %s", __func__);
 		return ;
 	}
-	usr_msg("moved in %s", __func__);
+	usr_msg("moved in function: %s", __func__);
 	if(0 == trigger_flag) {
 		usr_msg("handler button half schedule");
 		return ;
 	} else {
 		mutex_lock(&btn->lock);
-		key_val = gpio_get_value(btn->mcu_p53_gpio);
-		if(key_val) {
-			// mdelay(150);
-			usr_msg("in function: %s, info->mcu_p42_gpio = %d\n", __func__ ,btn->mcu_p42_gpio);
+		val = gpio_get_value(btn->mcu_p53_gpio);
+		//if(key_val) {
+			//usr_msg("in function: %s, info->mcu_p42_gpio = %d\n", __func__ ,btn->mcu_p42_gpio);
 		
-			usr_msg("release");
-			input_report_key(btn->inputdev, KEY_VAL, 1);
+			//usr_msg("release");
+			//input_report_key(btn->inputdev, KEY_VAL, 1);
+			//input_sync(btn->inputdev);
+			//#if 0
+			//usr_msg("in function: %s, current system_state = %s", __func__, (system_state == SYSTEM_POWER_OFF) ? "SYSTEM_POWER_OFF" : "NOT IN SYSTEM_POWER_OFF");
+			//while(system_state != SYSTEM_POWER_OFF) {
+			//	usr_msg("wait flag SYSTEM_POWER_OFF");
+			//	mdelay(20);
+			//}
+			//usr_msg("system power off");
+			//#endif
+			//sn8p27113aa_force_poweroff_loop(btn);
+		
+		//} else {
+	        usr_msg("pressed, report KEY_CODE = %d, KEY_VALUE = %d", KEY_VAL, val);
+	        input_report_key(btn->inputdev, KEY_VAL, val);
 			input_sync(btn->inputdev);
-		} else {
-			// mdelay(150);
-
-	        usr_msg("pressed");
-	        input_report_key(btn->inputdev, KEY_VAL, 0);
-			input_sync(btn->inputdev);
-		}
+			sn8p27113aa_force_poweroff_loop(btn);
+		//}
 		trigger_flag = 0;
 		mutex_unlock(&btn->lock);
 	}
-
-	return ;
-out:
-	trigger_flag = 0;
-	mutex_unlock(&btn->lock);
 	return ;
 }
 
@@ -198,6 +300,7 @@ static enum hrtimer_restart usr_hrtimer_callback(struct hrtimer * arg)
 	mutex_lock(&btn->tim_lock);
     now = arg->base->get_time();
 	/** do something -------------------------------------------------*/
+	usr_msg("moved in function: %s", __func__);
     hrtimer_forward(arg, now, btn->tim_period);
 	mutex_unlock(&btn->tim_lock);
     return HRTIMER_RESTART;
@@ -208,7 +311,6 @@ static void hrt_timer_init(struct sn8p27113aa_info	* btn, s64 seconds, unsigned 
     btn->tim_period = ktime_set(seconds, MS_TO_NS(mseconds));    
     hrtimer_init(&btn->tim, CLOCK_MONOTONIC, HRTIMER_MODE_REL);
     btn->tim.function = usr_hrtimer_callback;
-	
     hrtimer_start(&btn->tim, btn->tim_period, HRTIMER_MODE_REL);
 	mutex_init(&btn->tim_lock);
 }
@@ -223,11 +325,10 @@ static void hrt_timer_del(struct sn8p27113aa_info	* btn)
 static int usr_get_dts_info(struct sn8p27113aa_info * info, struct device *dev)
 {
 	int ret;
-	struct device_node *node;
-	
-	node = of_find_node_by_name(NULL, "rockchip,r100u_mcu-key"); 
+	struct device_node *node = NULL;
+	node = of_find_compatible_node(NULL, NULL, "rockchip,r100u-mcu-key");
 	if (!node) {
-		usr_msg("cannot find node name rockchip,r100u_mcu-key");
+		usr_msg("cannot find node name rockchip,r100u-mcu-key");
 		return -ENODEV;
 	}
 	info->mcu_p42_gpio = of_get_named_gpio(node, "mcu-p42-gpio", 0);
@@ -252,7 +353,7 @@ static int usr_get_dts_info(struct sn8p27113aa_info * info, struct device *dev)
 		goto out1;
 	}
 	usr_msg("requested mcu_p42_gpio number: %d, mcu_p53_gpio number: %d", info->mcu_p42_gpio, info->mcu_p53_gpio);
-	ret = sn8p27113aa_init(info);
+	ret = sn8p27113aa_chip_init(info);
 	if(ret < 0)
 		goto out2;
 	
@@ -274,12 +375,13 @@ static int sn8p27113aa_probe(struct platform_device *pdev)
 		usr_msg("error: devm_kmalloc");
 		return -ENOMEM;
 	}
+	usr_msg("moved in function: %s", __func__);
 	mutex_init(&info->lock);
 
 	platform_set_drvdata(pdev, info);
 	dev_set_drvdata(&pdev->dev, info);
 	
-#if  1
+
 	info->inputdev = devm_input_allocate_device(&pdev->dev);
 	if(IS_ERR(info->inputdev)){
 		usr_msg("error: input_allocate_device failed!");
@@ -303,13 +405,13 @@ static int sn8p27113aa_probe(struct platform_device *pdev)
 		usr_msg("error: input register device failed!");
 		goto error1;
 	}
-#endif
+
 
 	ret = usr_get_dts_info(info, &pdev->dev);
 	if(ret < 0) {
 		ret = -ENODEV;
 		usr_msg("error: get gpio dts info");
-		return ret;
+		goto error1;
 	}
 
 	
@@ -331,7 +433,7 @@ static int sn8p27113aa_probe(struct platform_device *pdev)
 	}
 	usr_msg("requested irq number = %d", info->irq);
 #if HRT_TIMER
-	//  hrt_timer_init(info, 0, 100);
+	hrt_timer_init(info, 0, 1000);
 #endif
 	platform_set_drvdata(pdev, (void *) info);
 	dev_set_drvdata(&pdev->dev, (void *) info);
@@ -340,11 +442,12 @@ static int sn8p27113aa_probe(struct platform_device *pdev)
 
 error3:
 	destroy_workqueue(info->wq);
+
 error2:
 	input_put_device(info->inputdev);
+	input_free_device(info->inputdev);
 error1:
-   input_free_device(info->inputdev);
-   
+
    return ret;
 
 }
@@ -395,8 +498,8 @@ static int sn8p27113aa_resume(struct device *dev)
 }
 #endif
 
-
 static SIMPLE_DEV_PM_OPS(sn8p27113aa_pm_ops, sn8p27113aa_suspend, sn8p27113aa_resume);
+#endif
 
 static struct platform_driver sn8p27113aa_driver = {
 	.probe		= sn8p27113aa_probe,
@@ -404,11 +507,11 @@ static struct platform_driver sn8p27113aa_driver = {
 	.driver		= {
 		.name	= MCU_DEV_NAME,
 		.owner	= THIS_MODULE,
-		.pm	= &sn8p27113aa_pm_ops,
+		// .pm	= &sn8p27113aa_pm_ops,
 		.of_match_table = of_match_ptr(mcu_key_match_table),
 	},
 };
-#endif
+
 
 static int __init sn8p27113aa_init(void)
 {	
@@ -422,7 +525,7 @@ static void __exit sn8p27113aa_exit(void)
 	platform_driver_unregister(&sn8p27113aa_driver);
 }
 
-late_initcall(sn8p27113aa_init);
+module_init(sn8p27113aa_init);
 module_exit(sn8p27113aa_exit);
 
 MODULE_LICENSE("GPL");
