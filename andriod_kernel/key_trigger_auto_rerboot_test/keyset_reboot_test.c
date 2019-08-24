@@ -1,3 +1,14 @@
+/**********************************************************************
+* dts 
+
+reboot_test: reboot-test {
+	compatible = "rockchip, reboot-test";
+	status = "okay";
+	reboot-key = <&gpio5, RK_PC3, GPIO_ACTIVE_LOW>;
+	detect_interval = <100>;		//ms
+}
+
+***********************************************************************/
 #include <linux/module.h>
 #include <linux/init.h>
 #include <linux/fs.h>
@@ -61,17 +72,14 @@ MODULE_DEVICE_TABLE(of, reboot_key_match_table);
 
 /*--------------------------------------------------------------------------------------------------------------*/
 struct reboot_key_info {
-	int 						key_gpio_num;
-	int 						led_gpio_num;
+	int 						reboot_trigger_io;
+	int 						detect_interval;
 	unsigned int 				irq;
 	struct input_dev 			*inputdev;
 	struct mutex 				lock;
 	struct workqueue_struct 	* wq;
 	struct work_struct			work;
 	struct mutex				tim_lock;
-	struct work_struct 			reboot_test_runing;
-	struct work_struct 			reboot_test_pass;
-	struct work_struct 			reboot_test_failed;
 };
 
 /**----------------------------------------------------------------------------------*/
@@ -218,14 +226,12 @@ static struct attribute *reboot_led_attributes[] = {
     NULL
 };
 
-static struct attribute *reboot_test_status_attr_group[] = {
- 	.attrs = reboot_led_attributes
-};
+
 
 static int reboot_key_sysfs_create(struct platform_device * pdev)
 {
 	sysfs_create_group(&pdev->dev.kobj, &reboot_test_status_attr_group);
-	driver_create_file(struct device_driver * drv, const struct driver_attribute * attr);
+	device_create_file(struct device * dev, const struct device_attribute * attr);
 }
 
 
