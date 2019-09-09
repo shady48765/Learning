@@ -116,11 +116,11 @@ static void data_handler(struct work_struct * work)
     mutex_lock(&info->lock);
     mdelay(info->detect_interval);
     val = gpio_get_value(info->reboot_trigger_io);
-    debug_msg("pressed, report KEY_CODE = %d, KEY_VALUE = %d", KEY_VAL, val);
-    input_report_key(info->inputdev, KEY_VAL, val);
-    input_sync(info->inputdev);
-    debug_msg("release, report KEY_CODE = %d, KEY_VALUE = %d", KEY_VAL, !val);
-    input_report_key(info->inputdev, KEY_VAL, !val);
+	if(!val)
+    	debug_msg("pressed, report KEY_CODE = %d, KEY_VALUE = %d", KEY_VAL, !val);
+	else
+    	debug_msg("release, report KEY_CODE = %d, KEY_VALUE = %d", KEY_VAL, !val);
+    input_report_key(info->inputdev, KEY_VAL, !val);		// invert for suitable android key DOWN and UP
     input_sync(info->inputdev);
 
     mutex_unlock(&info->lock);
