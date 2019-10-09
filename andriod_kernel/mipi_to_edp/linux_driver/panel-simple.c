@@ -164,11 +164,13 @@ struct it6151_work_struct it6151_work;
 static void wait_it6151_init_recall(struct work_struct *work)
 {
 	// struct it6151_work * it6151_queue_info = (struct it6151_work *)work->data;
-    
+	if(1 != it6151_i2c_init_flag)
+		schedule();
     usr_msg("get in wait_it6151_init_recall, it6151_i2c_init_flag = %d", it6151_i2c_init_flag);
 	panel_simple_probe((struct device *)it6151_work.it6151_dev, (struct panel_desc *)it6151_work.it6151_desc);
 	// wake_up_interruptible(&wait_it6151_head);
 	usr_msg("run function: panel_simple_probe finished");
+	it6151_i2c_init_flag += 1;
 }
 
 static void it6151_create_waitqueue(struct device *dev, const struct panel_desc *desc)
@@ -184,7 +186,7 @@ static void it6151_create_waitqueue(struct device *dev, const struct panel_desc 
 	// INIT_WORK(&wait_it6151_head, wait_it6151_init_recall, &it6151_work);
 	INIT_WORK(&it6151_work.it6151_wait_struct, wait_it6151_init_recall);
 	schedule_work(&it6151_work.it6151_wait_struct);
-	wait_event_interruptible(wait_it6151_head, it6151_i2c_init_flag != 0);
+	wait_event_interruptible(wait_it6151_head, it6151_i2c_init_flag == 1);
 	usr_msg("waitqueue_created, init codition =  %d", it6151_i2c_init_flag);
 }
 #endif
@@ -798,7 +800,7 @@ static int panel_simple_probe(struct device *dev, const struct panel_desc *desc)
 	const char *cmd_type;
 	u32 val;
 	int err;
-
+	dev_err(dev, "---> moved in function: %s\n", __func__);
 	panel = devm_kzalloc(dev, sizeof(*panel), GFP_KERNEL);
 	if (!panel)
 		return -ENOMEM;
@@ -2224,7 +2226,7 @@ static int panel_simple_platform_probe(struct platform_device *pdev)
 	id = of_match_node(platform_of_match, pdev->dev.of_node);
 	if (!id)
 		return -ENODEV;
-
+	dev_err(&pdev->dev, "---> moved in function: %s\n", __func__);
 #if HAS_IT6151
 	it6151_create_waitqueue(&pdev->dev, id->data);
 	return 0;
