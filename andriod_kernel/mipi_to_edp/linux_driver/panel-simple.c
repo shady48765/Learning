@@ -40,10 +40,6 @@
 #include <linux/of_graph.h>
 #include <video/videomode.h>
 
-// for mipi to edp chip it6151
-#include "it6151_global.h"
-#include <linux/workqueue.h>
-
 struct cmd_ctrl_hdr {
 	u8 dtype;	/* data type */
 	u8 wait;	/* ms */
@@ -118,13 +114,7 @@ struct panel_simple {
 
 	struct gpio_desc *enable_gpio;
 	struct gpio_desc *reset_gpio;
-#if HAS_IT6151
-		struct gpio_desc *it6151_pwr_3v3;
-		struct gpio_desc *it6151_pwr_1v8;
-		struct gpio_desc *it6151_stadby;
-		int lcd_type;
-#endif
-
+	struct gpio_desc *vdd3_3_gpio;
 
 	int cmd_type;
 
@@ -148,48 +138,6 @@ enum MCU_IOCTL {
 	MCU_WRDATA,
 	MCU_SETBYPASS,
 };
-
-#if HAS_IT6151
-static int panel_simple_probe(struct device *dev, const struct panel_desc *desc);
-
-static DECLARE_WAIT_QUEUE_HEAD(wait_it6151_head);
-struct it6151_work_struct {
-	struct work_struct	 		it6151_wait_struct;
-	const struct device 		*it6151_dev;
-	const struct panel_desc 			*it6151_desc;
-};
-struct it6151_work_struct it6151_work;
-
-
-static void wait_it6151_init_recall(struct work_struct *work)
-{
-	// struct it6151_work * it6151_queue_info = (struct it6151_work *)work->data;
-	if(1 != it6151_i2c_init_flag)
-		schedule();
-    usr_msg("get in wait_it6151_init_recall, it6151_i2c_init_flag = %d", it6151_i2c_init_flag);
-	panel_simple_probe((struct device *)it6151_work.it6151_dev, (struct panel_desc *)it6151_work.it6151_desc);
-	// wake_up_interruptible(&wait_it6151_head);
-	usr_msg("run function: panel_simple_probe finished");
-	it6151_i2c_init_flag += 1;
-}
-
-static void it6151_create_waitqueue(struct device *dev, const struct panel_desc *desc)
-{
-	// struct it6151_work * it6151_work_info = kmalloc(sizeof(struct it6151_work), GFP_KERNEL);
-	// if(IS_ERR(it6151_work_info)) {
-	//	usr_msg("error: devm_kmalloc it6151_work_info");
-	//	return -ENOMEM;
-	//}
-	it6151_work.it6151_dev = dev;
-	it6151_work.it6151_desc = desc;
-	init_waitqueue_head(&wait_it6151_head);
-	// INIT_WORK(&wait_it6151_head, wait_it6151_init_recall, &it6151_work);
-	INIT_WORK(&it6151_work.it6151_wait_struct, wait_it6151_init_recall);
-	schedule_work(&it6151_work.it6151_wait_struct);
-	wait_event_interruptible(wait_it6151_head, it6151_i2c_init_flag == 1);
-	usr_msg("waitqueue_created, init codition =  %d", it6151_i2c_init_flag);
-}
-#endif
 
 static inline int get_panel_cmd_type(const char *s)
 {
@@ -613,9 +561,10 @@ static int panel_simple_disable(struct drm_panel *panel)
 {
 	struct panel_simple *p = to_panel_simple(panel);
 	int err = 0;
-    // printk("---> moved in function: %s\n", __func__);
+    printk("---> moved in function: %s step1\n", __func__);
 	if (!p->enabled)
 		return 0;
+    printk("---> moved in function: %s step2\n", __func__);
 	if (p->backlight) {
 		p->backlight->props.power = FB_BLANK_POWERDOWN;
 		backlight_update_status(p->backlight);
@@ -630,6 +579,7 @@ static int panel_simple_disable(struct drm_panel *panel)
 			dev_err(p->dev, "failed to send mcu off cmds\n");
 	}
 	p->enabled = false;
+    printk("---> moved out function: %s\n", __func__);
 	return 0;
 }
 
@@ -637,9 +587,10 @@ static int panel_simple_unprepare(struct drm_panel *panel)
 {
 	struct panel_simple *p = to_panel_simple(panel);
 	int err = 0;
-    printk("---> moved in function: %s\n", __func__);
+    printk("---> moved in function: %s step1\n", __func__);
 	if (!p->prepared)
 		return 0;
+    printk("---> moved in function: %s step2\n", __func__);
 	if (p->off_cmds) {
 		if (p->dsi)
 			err = panel_simple_dsi_send_cmds(p, p->off_cmds);
@@ -655,8 +606,8 @@ static int panel_simple_unprepare(struct drm_panel *panel)
 	if (p->enable_gpio)
 		gpiod_direction_output(p->enable_gpio, 0);
 	
-	// if (p->vdd3_3_gpio)
-	//	gpiod_direction_output(p->vdd3_3_gpio, 1);
+	if (p->vdd3_3_gpio)
+		gpiod_direction_output(p->vdd3_3_gpio, 1);
 
 	panel_simple_regulator_disable(panel);
 
@@ -664,6 +615,7 @@ static int panel_simple_unprepare(struct drm_panel *panel)
 		msleep(p->desc->delay.unprepare);
 
 	p->prepared = false;
+    printk("---> moved out function: %s\n", __func__);
 	return 0;
 }
 
@@ -671,9 +623,10 @@ static int panel_simple_prepare(struct drm_panel *panel)
 {
 	struct panel_simple *p = to_panel_simple(panel);
 	int err;
-    // printk("---> moved in function: %s\n", __func__);
+    printk("---> moved in function: %s step1\n", __func__);
 	if (p->prepared)
 		return 0;
+    printk("---> moved in function: %s step2\n", __func__);
 	err = panel_simple_regulator_enable(panel);
 	if (err < 0) {
 		dev_err(panel->dev, "failed to enable supply: %d\n", err);
@@ -683,8 +636,8 @@ static int panel_simple_prepare(struct drm_panel *panel)
 	if (p->enable_gpio)
 		gpiod_direction_output(p->enable_gpio, 1);
 	
-	// if (p->vdd3_3_gpio)
-	//	gpiod_direction_output(p->vdd3_3_gpio, 0);
+	if (p->vdd3_3_gpio)
+		gpiod_direction_output(p->vdd3_3_gpio, 0);
 
 	if (p->desc && p->desc->delay.prepare)
 		msleep(p->desc->delay.prepare);
@@ -711,6 +664,7 @@ static int panel_simple_prepare(struct drm_panel *panel)
 	}
 
 	p->prepared = true;
+    printk("---> moved out function: %s\n", __func__);
 	return 0;
 }
 
@@ -718,9 +672,10 @@ static int panel_simple_enable(struct drm_panel *panel)
 {
 	struct panel_simple *p = to_panel_simple(panel);
 	int err = 0;
-    // printk("---> moved in function: %s\n", __func__);
+    printk("---> moved in function: %s step1\n", __func__);
 	if (p->enabled)
 		return 0;
+    printk("---> moved in function: %s step2\n", __func__);
 	if (p->cmd_type == CMD_TYPE_MCU) {
 		err = panel_simple_mcu_send_cmds(p, p->on_cmds);
 		if (err)
@@ -735,6 +690,7 @@ static int panel_simple_enable(struct drm_panel *panel)
 	}
 
 	p->enabled = true;
+    printk("---> moved out function: %s\n", __func__);
 	return 0;
 }
 
@@ -800,7 +756,7 @@ static int panel_simple_probe(struct device *dev, const struct panel_desc *desc)
 	const char *cmd_type;
 	u32 val;
 	int err;
-	dev_err(dev, "---> moved in function: %s\n", __func__);
+
 	panel = devm_kzalloc(dev, sizeof(*panel), GFP_KERNEL);
 	if (!panel)
 		return -ENOMEM;
@@ -852,33 +808,18 @@ static int panel_simple_probe(struct device *dev, const struct panel_desc *desc)
 		return err;
 	}
 	
+	panel->vdd3_3_gpio = devm_gpiod_get_optional(dev, "3v3_gpio", 0);
+	if (IS_ERR(panel->vdd3_3_gpio)) {
+		err = PTR_ERR(panel->vdd3_3_gpio);
+		dev_err(dev, "failed to request vdd3_3_gpio GPIO: %d\n", err);
+		return err;
+	}
 	panel->reset_gpio = devm_gpiod_get_optional(dev, "reset", 0);
 	if (IS_ERR(panel->reset_gpio)) {
 		err = PTR_ERR(panel->reset_gpio);
 		dev_err(dev, "failed to request reset GPIO: %d\n", err);
 		return err;
 	}
-	
-#if HAS_IT6151
-	panel->it6151_pwr_3v3 = devm_gpiod_get_optional(dev, "it6151-3v3-enable", 0);
-	if (IS_ERR(panel->it6151_pwr_3v3)) {
-		err = PTR_ERR(panel->it6151_pwr_3v3);
-		dev_err(dev, "failed to request it6151-3v3-enable GPIO: %d\n", err);
-		return err;
-	}
-	panel->it6151_pwr_1v8 = devm_gpiod_get_optional(dev, "it6151-1v8-enable", 0);
-	if (IS_ERR(panel->it6151_pwr_1v8)) {
-		err = PTR_ERR(panel->it6151_pwr_1v8);
-		dev_err(dev, "failed to request it6151-1v8-enable GPIO: %d\n", err);
-		return err;
-	}
-	panel->it6151_pwr_1v8 = devm_gpiod_get_optional(dev, "it6151-stadby-enable", 0);
-	if (IS_ERR(panel->it6151_pwr_1v8)) {
-		err = PTR_ERR(panel->it6151_pwr_1v8);
-		dev_err(dev, "failed to request it6151-stadby-enable GPIO: %d\n", err);
-		return err;
-	}
-#endif
 
 	if (of_property_read_string(dev->of_node, "rockchip,cmd-type",
 				    &cmd_type))
@@ -1009,8 +950,8 @@ static void panel_simple_shutdown(struct device *dev)
 	if (panel->enable_gpio)
 		gpiod_direction_output(panel->enable_gpio, 0);
 	
-	// if (panel->vdd3_3_gpio)
-	//	gpiod_direction_output(panel->vdd3_3_gpio, 1);
+	if (panel->vdd3_3_gpio)
+		gpiod_direction_output(panel->vdd3_3_gpio, 1);
 
 	panel_simple_regulator_disable(&panel->base);
 }
@@ -2226,13 +2167,8 @@ static int panel_simple_platform_probe(struct platform_device *pdev)
 	id = of_match_node(platform_of_match, pdev->dev.of_node);
 	if (!id)
 		return -ENODEV;
-	dev_err(&pdev->dev, "---> moved in function: %s\n", __func__);
-#if HAS_IT6151
-	it6151_create_waitqueue(&pdev->dev, id->data);
-	return 0;
-#else
+
 	return panel_simple_probe(&pdev->dev, id->data);
-#endif
 }
 
 static int panel_simple_platform_remove(struct platform_device *pdev)

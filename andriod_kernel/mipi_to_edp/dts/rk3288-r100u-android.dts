@@ -7,7 +7,7 @@
 // #include "rk3288-r100u-lvds-21p5inch-1920x1080.dtsi"
 // #include "rk3288-r100u-mipi-10inch-1920x1080.dtsi"
 // #include "rk3288-r100u-mipi-8inch-800x1280.dtsi"
-// #include "rk3288-r100u-hdmi.dtsi"
+// #include "rk3288-r100u-mipi-ccccc-8inch-800x1280.dtsi"
 #include "rk3288-r100u-mipi_to_edp.dtsi"
 
 / {
@@ -26,85 +26,22 @@
     		};
     	};
     /** end : default system power-key -----------------------------------------------*/
-    /** start : mcu power off control -----------------------------------------------*/
-    // mcu_key: mcu-key {
-    //     compatible = "rockchip,r100u-mcu-key";
-    //     status = "okay";
-    //     mcu-p53-gpio = <&gpio0 RK_PB6 GPIO_ACTIVE_HIGH>;
-    //     mcu-p42-gpio = <&gpio8 RK_PA6 GPIO_ACTIVE_HIGH>;
-    // };
-    /** end : mcu power off control ------------------------------------------------*/
     leds {
         compatible = "gpio-leds";
         status = "okay";
         led0:led-control {
             label = "led_control";
-            gpios = <&gpio0 RK_PA1 GPIO_ACTIVE_LOW>;
+            gpios = <&gpio0 RK_PA1 GPIO_ACTIVE_HIGH>;			// change trigger mode to timer, suitable reboot test requirement. default on.
             default-state = "on";
-            linux,default-trigger = "heartbeat";
+            linux,default-trigger = "timer";
+            // no paramter for default led status is on
+        };
+         led1:led-pwr {
+            label = "led-pwr";
+	    gpios = <&gpio7 RK_PA5 GPIO_ACTIVE_HIGH>;			// led red
+            default-state = "on";
         };
     };
-};
-
-&pwm2 {
-    status = "okay";
-    compatible = "rockchip,remotectl-pwm";
-    pinctrl-names = "default";          // change default active to default
-    pinctrl-0 = <&pwm2_pin>;
-    // pinctrl-0 = <&pwm3_pin>;
-    remote_pwm_id = <2>;
-    handle_cpu_id = <1>;
-    interrupts = <GIC_SPI 78 IRQ_TYPE_LEVEL_HIGH>;
-    remote_support_psci = <1>;
-    // ir_key0 {   // invert code, rockchip default mode
-    //     rockchip,usercode = <0x7F80>;
-    //     // rockchip,usercode = <0x4040>;
-    //     rockchip,key_table =
-    //         <0xED   KEY_POWER>,
-    //         <0xFB   KEY_MENU>,
-    //         <0xF9   KEY_BACK>,
-    //         <0xFE   KEY_HOMEPAGE>,
-    //         <0xF1   KEY_VOLUMEUP>,
-    //         <0xF3   KEY_VOLUMEDOWN>,
-    //         <0xFA   KEY_UP>,
-    //         <0xE4   KEY_DOWN>,
-    //         <0xF8   KEY_LEFT>,
-    //         <0xF7   KEY_ENTER>,
-    //         <0xF6   KEY_RIGHT>;
-    // };  
-    ir_key1 {   // uninvert code
-    rockchip,usercode = <0x7F80>;
-        rockchip,key_table =
-            <0x12   KEY_POWER>,
-            <0x04   KEY_MENU>,
-            <0x06   KEY_BACK>,
-            <0x01   KEY_HOMEPAGE>,
-            <0x0E   KEY_VOLUMEUP>,
-            <0x0C   KEY_VOLUMEDOWN>,
-            <0x05   KEY_UP>,
-            <0x1B   KEY_DOWN>,
-            <0x07   KEY_LEFT>,
-            <0x08   KEY_ENTER>,
-            <0x09   KEY_IR_POWER>;
-            // <0x09   KEY_RIGHT>;
-    };  
-	ir_key2 {
-		rockchip,usercode = <0xff00>;
-		rockchip,key_table =
-            <0xEF  KEY_POWER>,
-            <0xFE  KEY_VOLUMEUP>,
-            <0xFD  KEY_DELETE>,
-            <0xF8  KEY_VOLUMEDOWN>,
-            <0xE8  KEY_UP>,
-            <0xE5  KEY_LEFT>,
-            <0xE4  KEY_ENTER>,
-            <0xE0  KEY_DOWN>,
-            <0xBE  KEY_MENU>,
-            <0xA6  KEY_RIGHT>,
-            <0x5A  KEY_BRIGHTNESSDOWN>,
-            <0xA3  KEY_BACK>,
-            <0x5F  KEY_BRIGHTNESSUP>;
-	};
 };
 
 &usbphy {
@@ -125,10 +62,10 @@
 };
 
 // for kernel driver camera part
-&isp {
-    status = "okay";
-    camera_power = <&gpio0 RK_PC1 GPIO_ACTIVE_HIGH>;
-};
+// &isp {
+//     status = "disabled";
+//     camera_power = <&gpio0 RK_PC1 GPIO_ACTIVE_HIGH>;
+// };
 
 /** start usb host mode set ------------------------------------------------------*/
 &usb_host1 {
@@ -179,28 +116,25 @@
 &uart4 {
     status = "okay";
 };
-&i2c0 {
-    hym8536@51 {
-		compatible = "rtc,hym8563";
-		status = "disabled";
-		reg = <0x51>;
-        irq_gpio = <&gpio8 RK_PA7 GPIO_ACTIVE_LOW>;
-    };
-};
+
 &i2c1 {
 	status = "okay";
-	clock-frequency = <400000>; // decode chip i2c speed max 100KHz
+	clock-frequency = <100000>; // decode chip i2c speed max 100KHz
     
 	stk8b@18 {
 		compatible = "gs_stk8baxx";
-		status = "disabled";
+		status = "okay";
 		reg = <0x18>;
         type = <SENSOR_TYPE_ACCEL>;
         irq-gpio = <&gpio8 RK_PA0 GPIO_ACTIVE_HIGH>;
         irq_enable = <0>;
-        poll_delay_ms = <200>;
+        poll_delay_ms = <30>;
         layout = <7>;
 	};
+};
+
+&i2c3 {
+	status = "okay";
 };
 
 &i2c4 {
@@ -209,18 +143,12 @@
     
 	ilitek@41 {
         compatible = "tchip,ilitek";
-        status = "disabled";
         reg = <0x41>;
         screen_max_x = <1080>;
         screen_max_y = <1920>;
         ilitek,irq-gpio = <&gpio7 6 IRQ_TYPE_LEVEL_LOW>;
         ilitek,reset-gpio = <&gpio7 5 GPIO_ACTIVE_HIGH>;
     };
-};
-
-&i2c5 {
-	status = "okay";
-	clock-frequency = <400000>;
 };
 
 &pinctrl {

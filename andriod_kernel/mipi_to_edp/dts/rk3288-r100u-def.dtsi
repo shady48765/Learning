@@ -55,9 +55,8 @@
 	};
     
     /delete-node/ dmc@ff610000;
-	dmc: dmc {      // dynamic ddr speed config
+	dmc: dmc {
 		compatible = "rockchip,rk3288-dmc";
-        status = "okay";
 		devfreq-events = <&dfi>;
 		clocks = <&cru SCLK_DDRCLK>, <&cru PCLK_PUBL0>,
 			 <&cru PCLK_DDRUPCTL0>, <&cru PCLK_PUBL1>,
@@ -83,11 +82,12 @@
 			SYS_STATUS_DUALVIEW	    396000
 			SYS_STATUS_ISP		    396000
 		>;
-        // auto-min-freq = <396000>;
-        auto-min-freq = <396000>;
+		auto-min-freq = <396000>;
 		auto-freq-en = <0>;
+		status = "diasbled";
 	};
-    dmc_opp_table: opp_table2 {
+
+	dmc_opp_table: opp_table2 {
 		compatible = "operating-points-v2";
 
 		opp-192000000 {
@@ -106,67 +106,7 @@
 			opp-hz = /bits/ 64 <528000000>;
 			opp-microvolt = <1150000>;
 		};
-        opp-667000000 {
-			opp-hz = /bits/ 64 <667000000>;
-			opp-microvolt = <1250000>;
-		};
-        opp-800000000 {
-			opp-hz = /bits/ 64 <800000000>;
-			opp-microvolt = <1350000>;
-		};
 	};
-	// dmc backup ----------------------------------------------------------------
-	// dmc: dmc {      // dynamic ddr speed config
-	// 	compatible = "rockchip,rk3288-dmc";
-    //     status = "diasbled";
-	// 	devfreq-events = <&dfi>;
-	// 	clocks = <&cru SCLK_DDRCLK>, <&cru PCLK_PUBL0>,
-	// 		 <&cru PCLK_DDRUPCTL0>, <&cru PCLK_PUBL1>,
-	// 		 <&cru PCLK_DDRUPCTL1>;
-	// 	clock-names = "dmc_clk", "pclk_phy0", "pclk_upctl0",
-	// 		      "pclk_phy1", "pclk_upctl1";
-	// 	upthreshold = <55>;
-	// 	downdifferential = <10>;
-	// 	operating-points-v2 = <&dmc_opp_table>;
-	// 	vop-dclk-mode = <0>;
-	// 	min-cpu-freq = <600000>;
-	// 	rockchip,ddr_timing = <&ddr_timing>;
-	// 	system-status-freq = <
-	// 		/*system status		freq(KHz)*/
-	// 		SYS_STATUS_NORMAL	    396000
-	// 		SYS_STATUS_REBOOT	    396000
-	// 		SYS_STATUS_SUSPEND	    192000
-	// 		SYS_STATUS_VIDEO_1080P	300000
-	// 		SYS_STATUS_VIDEO_4K	    396000
-	// 		SYS_STATUS_VIDEO_4K_10B	528000
-	// 		SYS_STATUS_PERFORMANCE	528000
-	// 		SYS_STATUS_BOOST	    396000
-	// 		SYS_STATUS_DUALVIEW	    396000
-	// 		SYS_STATUS_ISP		    396000
-	// 	>;
-    //     auto-min-freq = <396000>;
-	// 	auto-freq-en = <0>;
-	// };
-	// dmc_opp_table: opp_table2 {
-	// 	compatible = "operating-points-v2";
-
-	// 	opp-192000000 {
-	// 		opp-hz = /bits/ 64 <192000000>;
-	// 		opp-microvolt = <1100000>;
-	// 	};
-	// 	opp-300000000 {
-	// 		opp-hz = /bits/ 64 <300000000>;
-	// 		opp-microvolt = <1100000>;
-	// 	};
-	// 	opp-396000000 {
-	// 		opp-hz = /bits/ 64 <396000000>;
-	// 		opp-microvolt = <1100000>;
-	// 	};
-	// 	opp-528000000 {
-	// 		opp-hz = /bits/ 64 <528000000>;
-	// 		opp-microvolt = <1150000>;
-	// 	};
-	// };
 
 	reserved-memory {
 		ramoops_mem: ramoops@00000000 {
@@ -275,9 +215,7 @@
 	wireless-wlan {
 		compatible = "wlan-platdata";
 		rockchip,grf = <&grf>;
-		// wifi_chip_type = "rtl8723ds";
-		// wifi_chip_type = "rtl8821ae";
-		wifi_chip_type = "rtl8822be";
+		wifi_chip_type = "rtl8723ds";
 		sdio_vref = <1800>;
 		WIFI,host_wake_irq = <&gpio4 30 GPIO_ACTIVE_HIGH>;
 		status = "okay";
@@ -399,7 +337,8 @@
         status = "okay";
         simple-audio-card,format = "i2s";
 		simple-audio-card,name = "rockchip,es8316-codec";
-		simple-audio-card,mclk-fs = <512>;
+		// simple-audio-card,mclk-fs = <512>;
+        simple-audio-card,mclk-fs = <512>;
 		simple-audio-card,widgets =
 			"Microphone", "Microphone Jack",
 			"Headphone", "Headphone Jack";
@@ -507,9 +446,9 @@
 };
 
 /** star: not use cif in this project -----------------------------------------------------------*/
-&cif_isp0 {
-	status = "disable";
-};
+// &cif_isp0 {
+// 	status = "disable";
+// };
 
 &dfi {
 	status = "okay";
@@ -561,7 +500,7 @@
 		 <&cru SRST_USBOTG_CON>;
 	reset-names = "otg_ahb", "otg_phy", "otg_controller";
 	/*0 - Normal, 1 - Force Host, 2 - Force Device*/
-	// rockchip,usb-mode = <1>;	
+	// rockchip,usb-mode = <1>;
     rockchip,usb-mode = <0>;
 };
 
@@ -804,29 +743,29 @@
 	num-slots = <1>;
 	pinctrl-names = "default";
 	pinctrl-0 = <&emmc_clk &emmc_cmd &emmc_pwr &emmc_bus8>;
-	// max-frequency = <50000000>;
 	max-frequency = <100000000>;
-	// mmc-hs200-1_8v;
+	mmc-hs200-1_8v;
 	mmc-ddr-1_8v;
 	status = "okay";
 };
-// 100M
+
 &gmac {
-	status = "okay";
 	phy-supply = <&vcc_phy>;
 	phy-mode = "rgmii";
 	clock_in_out = "input";
-	snps,reset-gpio = <&gpio4 RK_PB0 GPIO_ACTIVE_LOW>;
+	snps,reset-gpio = <&gpio4 7 0>;
 	snps,reset-active-low;
 	snps,reset-delays-us = <0 10000 50000>;
 	assigned-clocks = <&cru SCLK_MAC>;
 	assigned-clock-parents = <&ext_gmac>;
 	pinctrl-names = "default";
 	pinctrl-0 = <&rgmii_pins>;
-	tx_delay = <0x28>;
-	rx_delay = <0x1B>;
+	tx_delay = <0x30>;
+	rx_delay = <0x10>;
 	max-speed = <100>;
+	status = "okay";
 };
+
 &saradc {
 	vref-supply = <&vccadc_ref>;
 	status = "okay";
@@ -865,6 +804,7 @@
 	pinctrl-names = "active";
 	pinctrl-0 = <&pwm1_pin_pull_down>;
 };
+
 
 &rga {
 	status = "okay";
